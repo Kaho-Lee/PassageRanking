@@ -151,7 +151,7 @@ def accuracy(y, y_pred):
 
 def generateEmbedding(embedding, query, passage):
     stemmer = SnowballStemmer("english") 
-    # stop_words = set(stopwords.words('english')) 
+    stop_words = set(stopwords.words('english')) 
     query_term_count = 0
     query_embedding = np.zeros(50)
     for term in query:
@@ -170,6 +170,10 @@ def generateEmbedding(embedding, query, passage):
                 norm_embedding = np.array(embedding[new_term])
                 norm_embedding = norm_embedding/np.linalg.norm(norm_embedding)
                 query_embedding += norm_embedding
+            # else:
+            #     spec_vector = np.zeros(50) -1
+            #     spec_vector = spec_vector/np.linalg.norm(spec_vector)
+            #     query_embedding += spec_vector
             #print('Q-Still Not Found: ', new_term)
 
     query_embedding = query_embedding/query_term_count
@@ -193,6 +197,10 @@ def generateEmbedding(embedding, query, passage):
                 norm_embedding = norm_embedding/np.linalg.norm(norm_embedding)
                 passage_embedding += norm_embedding
             #print('P-Still Not Found: ', new_term)
+            # else:
+            #     spec_vector = np.zeros(50) -1
+            #     spec_vector = spec_vector/np.linalg.norm(spec_vector)
+            #     passage_embedding += spec_vector
 
     passage_embedding = passage_embedding/passage_term_count
 
@@ -200,12 +208,15 @@ def generateEmbedding(embedding, query, passage):
         print('query {} passage {}'.format(query_term_count, passage_term_count))
         print(query)
         print(passage)
+        cos_sim = [0]
     if np.linalg.norm(passage_embedding) == 0.0 or np.linalg.norm(query_embedding)==0.0:
         print('query {} passage {}'.format(np.linalg.norm(query_embedding), np.linalg.norm(passage_embedding)))
         print(query)
         print(passage)
-
-    cos_sim = (passage_embedding @ np.atleast_2d(query_embedding).T)/(np.linalg.norm(passage_embedding)*np.linalg.norm(query_embedding))
+        cos_sim = [0]
+    else:
+        cos_sim = (passage_embedding @ np.atleast_2d(query_embedding).T)/(np.linalg.norm(passage_embedding)*np.linalg.norm(query_embedding))
+    
     query_passage_embedding = np.array([1, cos_sim[0]])
     
     # query_passage_embedding = np.hstack((query_embedding, passage_embedding))
@@ -240,11 +251,11 @@ def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val'):
     dict_empty = True
 
     for i, row in candidate_pass.iterrows():
-        # query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
-        query = word_tokenize(row['queries'].lower())
+        query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
+        # query = word_tokenize(row['queries'].lower())
         #print(query)
-        #passage = re.split('(\W)', row['passage'].lower())
-        passage = word_tokenize(row['passage'].lower())
+        passage = re.split('(\W)', row['passage'].lower())
+        # passage = word_tokenize(row['passage'].lower())
         #print(passage)
 
         query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['queries'].lower()).split(' ')

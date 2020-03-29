@@ -67,11 +67,11 @@ class dataPipeLine:
         relavancePot = []
         print('cal relavence sim')
         for i, row in relevancy_lines.iterrows():
-            # query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
-            query = word_tokenize(row['queries'].lower())
+            query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
+            # query = word_tokenize(row['queries'].lower())
             #print(query)
-            #passage = re.split('(\W)', row['passage'].lower())
-            passage = word_tokenize(row['passage'].lower())
+            passage = re.split('(\W)', row['passage'].lower())
+            # passage = word_tokenize(row['passage'].lower())
             #print(passage)
             query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['queries'].lower()).split(' ')
             passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['passage'].lower()).split(' ')
@@ -99,11 +99,11 @@ class dataPipeLine:
         print('cal non relavence sim')
         sample_reader = relevancy_lines.sample(int(relevancy_lines.shape[0]*0.01))
         for i, row in sample_reader.iterrows():
-            # query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
-            query = word_tokenize(row['queries'].lower())
+            query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
+            # query = word_tokenize(row['queries'].lower())
             #print(query)
-            #passage = re.split('(\W)', row['passage'].lower())
-            passage = word_tokenize(row['passage'].lower())
+            passage = re.split('(\W)', row['passage'].lower())
+            # passage = word_tokenize(row['passage'].lower())
             #print(passage)
             query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['queries'].lower()).split(' ')
             passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['passage'].lower()).split(' ')
@@ -143,11 +143,11 @@ class dataPipeLine:
         relavancePot = []
         print('cal relavence sim')
         for i, row in relevancy_lines.iterrows():
-            # query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
-            query = word_tokenize(row['queries'].lower())
+            query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
+            # query = word_tokenize(row['queries'].lower())
             #print(query)
-            #passage = re.split('(\W)', row['passage'].lower())
-            passage = word_tokenize(row['passage'].lower())
+            passage = re.split('(\W)', row['passage'].lower())
+            # passage = word_tokenize(row['passage'].lower())
             #print(passage)
             query_passage_embedding = generateEmbedding(self.embedding, query, passage)
             # print(query_passage_embedding)
@@ -163,11 +163,11 @@ class dataPipeLine:
         print('cal non relavence sim')
         sample_reader = relevancy_lines.sample(int(relevancy_lines.shape[0]*0.001))
         for i, row in sample_reader.iterrows():
-            # query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
-            query = word_tokenize(row['queries'].lower())
+            query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
+            # query = word_tokenize(row['queries'].lower())
             #print(query)
-            #passage = re.split('(\W)', row['passage'].lower())
-            passage = word_tokenize(row['passage'].lower())
+            passage = re.split('(\W)', row['passage'].lower())
+            # passage = word_tokenize(row['passage'].lower())
             #print(passage)
             query_passage_embedding = generateEmbedding(self.embedding, query, passage)
             non_relavancePot.append(query_passage_embedding[0])
@@ -217,11 +217,11 @@ class dataPipeLine:
         skip = [x for x in allRows if x not in vectorize_index ]
         reader = pd.read_csv(self.train_path, sep='\t', skiprows=skip)
         for i, row in reader.iterrows():
-            # query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
-            query = word_tokenize(row['queries'].lower())
+            query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
+            # query = word_tokenize(row['queries'].lower())
             #print(query)
-            #passage = re.split('(\W)', row['passage'].lower())
-            passage = word_tokenize(row['passage'].lower())
+            passage = re.split('(\W)', row['passage'].lower())
+            # passage = word_tokenize(row['passage'].lower())
             #print(passage)
 
             query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['queries'].lower()).split(' ')

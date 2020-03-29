@@ -40,8 +40,8 @@ class LogisticRegressor:
         
         #self.weights = np.zeros(100)
         
-        maxIteration = 150
-        tolerance = 0.0005
+        maxIteration = 100
+        tolerance = 0.001
         prev_loss = 0
         cur_iteration = 0
         eta = 0.0001
@@ -193,7 +193,7 @@ if __name__=="__main__":
     data = dataPipeLine(gloveEmbedding_path, train_path, idf_train)
     
     parameters = {}
-    mode = 'test'
+    mode = 'train'
     if mode == 'train':
         data.getSimProperty()
         relevancy_LR = LogisticRegressor(parameters)

@@ -12,26 +12,47 @@ from sklearn.model_selection import KFold
 from nltk.tokenize import word_tokenize 
 import xgboost as xgb
 import pickle
+from random import shuffle
 
 def batchDMatrix(reader, sampled_data_qid, embedding, idf):
     group = []
     for i, qid in enumerate(sampled_data_qid):
-        cur_qid_label, cur_qid_em = Data_Embedding(embedding, reader, qid, idf[str(qid)], mode='train')
+        # print(i, qid)
+        
+        cur_qid_label, cur_qid_em = Data_Embedding(embedding, reader, qid, idf[str(qid)], mode='Train')
         if i ==0:
             batch_label = cur_qid_label
             batch_em = cur_qid_em[:, 1:]
             group.append(cur_qid_em.shape[0])
         else:
-            batch_label = np.vstatck((batch_label, cur_qid_label))
+            batch_label = np.vstack((batch_label, cur_qid_label))
             batch_em = np.vstack((batch_em, cur_qid_em[:, 1:]))
             group.append(cur_qid_em.shape[0])
 
-    dmatrix = xgd.DMatrix(batch_em, label = batch_label)
+    dmatrix = xgb.DMatrix(batch_em, label = batch_label)
     dmatrix.set_group(group)
-
+    print('Gnerating Data Shape em: {}, label: {}'.format(batch_em.shape, batch_label.shape))
     return dmatrix
 
+def randomSampleKfold(qid_unique, qid_index):
+    # print(len(qid_index))
+    # sampled_train_index = train_qid_index[np.random.choice(len(train_qid_index), int(0.05*len(train_qid_index)), replace=True)]
+    sampled_index = qid_index[np.random.choice(len(qid_index), int(0.05*len(qid_index)), replace=True)]
+    # print(len(sampled_index) )
+
+    
+    # train_data_qid = [train_qid_unique[x] for x in sampled_train_index]
+    data_qid = [train_qid_unique[x] for x in sampled_index]
+    # print(train_data_qid, eval_data_qid)
+
+    return data_qid
+
 if __name__=="__main__":
+
+    # test = '-lepsy-leptic-leptic-less-less-less-lessly-lessness-let-let-let-let-let-leukemia-leukin-lexia-lexis-lexy-like-like-limbed-limbed-limbed-lined-ling-ling-ling-ling-lipoma-lipotropin-lipped'
+    # passage_lst = word_tokenize(test.lower())
+    # print(passage_lst)
+    # aa= tt
 
     train_path = '/Users/leekaho/Desktop/part2/train_data.tsv'
     val_path = '/Users/leekaho/Desktop/part2/validation_data.tsv'
@@ -42,10 +63,23 @@ if __name__=="__main__":
     train_qid_unique = train_reader.qid.unique().tolist()
 
     #from xgb sample code https://github.com/dmlc/xgboost/blob/master/demo/rank/rank.py
-    params = {'objective': 'rank:ndcg', 'eta': 0.1, 'gamma': 1.0,
+    params_ndcg_e1 = {'objective': 'rank:ndcg', 'eta': 0.1, 'gamma': 1.0,
           'min_child_weight': 0.1, 'max_depth': 6}
+    params_ndcg_e2 = {'objective': 'rank:ndcg', 'eta': 0.01, 'gamma': 1.0,
+          'min_child_weight': 0.1, 'max_depth': 6}
+    params_ndcg_g1 = {'objective': 'rank:ndcg', 'eta': 0.1, 'gamma': 0.1,
+          'min_child_weight': 0.1, 'max_depth': 6}
+    params_ndcg_c2 = {'objective': 'rank:ndcg', 'eta': 0.1, 'gamma': 1.0,
+          'min_child_weight': 0.01, 'max_depth': 6}
+    
+    params_pairwise_e1 = {'objective': 'rank:pairwise', 'eta': 0.1, 'gamma': 1.0,
+          'min_child_weight': 0.1, 'max_depth': 6}
+    
 
-    kf = KFold(n_splits=2, random_state=None, shuffle=False)
+    params_dict = {'params_ndcg_e1': params_ndcg_e1, 'params_ndcg_e2': params_ndcg_e2,
+    'params_ndcg_g1': params_ndcg_g1, 'params_pairwise_e1':params_pairwise_e1}
+
+    kf = KFold(n_splits=5, random_state=None, shuffle=False)
 
 
     with open(gloveEmbedding_path, 'r') as readFile:
@@ -56,34 +90,48 @@ if __name__=="__main__":
         train_idf = json.load(readFile)
     readFile.close()
 
-    i=0
+     #from xgb sample code https://github.com/dmlc/xgboost/blob/master/demo/rank/rank_sklearn.py
+    # params = {'objective': 'rank:ndcg', 'learning_rate': 0.1,
+    #       'gamma': 1.0, 'min_child_weight': 0.1,
+    #       'max_depth': 6, 'n_estimators': 4}
+    # passRank = xgb.sklearn.XGBRanker(**params) 
+    
+    maxIteration = 1
+    batchsize = 300
+    
     for train_qid_index, eval_qid_index in kf.split(train_qid_unique):
-        i += 1
-        sampled_train_index = train_qid[np.random.choice(len(train_qid), int(0.1*len(train_qid_index)))]
-        sampled_eval_index = eval_qid[np.random.choice(len(eval_qid), int(0.1*len(eval_qid_index)))]
-        print(sampled_train_qid_index, sampled_eval_qid_index )
+        print('Train Fold Length: {} Eval Fold Length: {}'.format(len(train_qid_index), len(eval_qid_index)))
+        passRank = None
+        eval_ndcg = {}
+        for i in range(maxIteration):
+            print('Iteration {}'.format(i+1))
+            shuffle(train_qid_index)
+            for start in range(0, len(train_qid_index), batchsize):
 
-        
-        train_data_qid = [train_qid_unique[x] for x in sampled_train_qid_index]
-        eval_data_qid = [train_qid_unique[x] for x in sampled_eval_qid_index]
-        print(train_data_qid, eval_data_qid)
+                if start + batchsize > len(train_qid_index):
+                    train_data_qid = [train_qid_unique[x] for x in train_qid_index[start:]]
+                    # print('len of train {}'.format(len(train_data_qid))
+                else:
+                    train_data_qid = [train_qid_unique[x] for x in train_qid_index[start:start+batchsize]]
+                    # print('len of train {}'.format(len(train_data_qid))
+                
+                eval_data_qid = randomSampleKfold(train_qid_unique, eval_qid_index)
 
-        train_dmatrix = batchDMatrix(train_reader, train_data_qid, embedding, train_idf)
-        eval_dmatrix = betchDMatrix(train_reader, eval_data_qid, embedding, train_idf)
+                print('Train DMatrix')
+                train_dmatrix = batchDMatrix(train_reader, train_data_qid, embedding, train_idf)
+                print('Eval DMatrix')
+                eval_dmatrix = batchDMatrix(train_reader, eval_data_qid, embedding, train_idf)
+
+                passRank = xgb.train(params, train_dmatrix,
+                        evals=[(eval_dmatrix, 'validation')], evals_result = eval_ndcg, xgb_model=passRank )
+            
+                print(eval_ndcg['validation'], eval_ndcg['validation'][-1])
 
 
         break
 
-
-
-    # batch_train_label, batch_train_em = valData_Embedding(embedding, train_reader, train_qid_unique[0], \
-    # train_idf[str(train_qid_unique[0])], mode='Train')
-
-    # train_dmatrix = xgd.DMatrix(batch_train_em, batch_train_label)
-
     '''
-    xgb_model = xgb.train(params, train_dmatrix, num_boost_round=4,
-                      evals=[(valid_dmatrix, 'validation')])
+    
 
     pred = xgb_model.predict(test_dmatrix)
     '''
