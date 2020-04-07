@@ -34,10 +34,10 @@ def batchDMatrix(reader, sampled_data_qid, embedding, idf):
     print('Gnerating Data Shape em: {}, label: {}'.format(batch_em.shape, batch_label.shape))
     return dmatrix
 
-def randomSampleKfold(qid_unique, qid_index):
+def randomSampleKfold(qid_unique, qid_index, ratio=0.05):
     # print(len(qid_index))
     # sampled_train_index = train_qid_index[np.random.choice(len(train_qid_index), int(0.05*len(train_qid_index)), replace=True)]
-    sampled_index = qid_index[np.random.choice(len(qid_index), int(0.05*len(qid_index)), replace=True)]
+    sampled_index = qid_index[np.random.choice(len(qid_index), int(ratio*len(qid_index)), replace=False)]
     # print(len(sampled_index) )
 
     
@@ -65,19 +65,21 @@ if __name__=="__main__":
     #from xgb sample code https://github.com/dmlc/xgboost/blob/master/demo/rank/rank.py
     params_ndcg_e1 = {'objective': 'rank:ndcg', 'eta': 0.1, 'gamma': 1.0,
           'min_child_weight': 0.1, 'max_depth': 6}
-    params_ndcg_e2 = {'objective': 'rank:ndcg', 'eta': 0.01, 'gamma': 1.0,
+    params_ndcg_e2 = {'objective': 'rank:ndcg', 'eta': 0.05, 'gamma': 1.0,
           'min_child_weight': 0.1, 'max_depth': 6}
-    params_ndcg_g1 = {'objective': 'rank:ndcg', 'eta': 0.1, 'gamma': 0.1,
+    params_ndcg_e = {'objective': 'rank:ndcg', 'eta': 1, 'gamma': 0.1,
           'min_child_weight': 0.1, 'max_depth': 6}
-    params_ndcg_c2 = {'objective': 'rank:ndcg', 'eta': 0.1, 'gamma': 1.0,
-          'min_child_weight': 0.01, 'max_depth': 6}
     
     params_pairwise_e1 = {'objective': 'rank:pairwise', 'eta': 0.1, 'gamma': 1.0,
           'min_child_weight': 0.1, 'max_depth': 6}
-    
+    params_pairwise_e2 = {'objective': 'rank:pairwise', 'eta': 0.05, 'gamma': 1.0,
+          'min_child_weight': 0.1, 'max_depth': 6}
 
-    params_dict = {'params_ndcg_e1': params_ndcg_e1, 'params_ndcg_e2': params_ndcg_e2,
-    'params_ndcg_g1': params_ndcg_g1, 'params_pairwise_e1':params_pairwise_e1}
+
+    params_dict = {'params_ndcg_e': params_ndcg_e, 'params_ndcg_e1': params_ndcg_e1, 
+    'params_ndcg_e2':params_ndcg_e2, 'params_pairwise_e1':params_pairwise_e1, 'params_pairwise_e2':params_pairwise_e2}
+
+    params_dict = {'params_ndcg_e': params_ndcg_e}
 
     kf = KFold(n_splits=5, random_state=None, shuffle=False)
 
@@ -96,25 +98,35 @@ if __name__=="__main__":
     #       'max_depth': 6, 'n_estimators': 4}
     # passRank = xgb.sklearn.XGBRanker(**params) 
     
-    maxIteration = 1
+    maxIteration = 2
     batchsize = 300
     
-    for train_qid_index, eval_qid_index in kf.split(train_qid_unique):
-        print('Train Fold Length: {} Eval Fold Length: {}'.format(len(train_qid_index), len(eval_qid_index)))
-        passRank = None
-        eval_ndcg = {}
-        for i in range(maxIteration):
-            print('Iteration {}'.format(i+1))
-            shuffle(train_qid_index)
-            for start in range(0, len(train_qid_index), batchsize):
+    best_model = None
+    best_param = None
+    cur_acc = 0.0
 
-                if start + batchsize > len(train_qid_index):
-                    train_data_qid = [train_qid_unique[x] for x in train_qid_index[start:]]
-                    # print('len of train {}'.format(len(train_data_qid))
-                else:
-                    train_data_qid = [train_qid_unique[x] for x in train_qid_index[start:start+batchsize]]
-                    # print('len of train {}'.format(len(train_data_qid))
+    for params_name in params_dict:
+        print('current setting ', params_name)
+        params = params_dict[params_name]
+        batch = 0
+        passRank = None
+        for train_qid_index, eval_qid_index in kf.split(train_qid_unique):
+            # print('Train Fold Length: {} Eval Fold Length: {}'.format(len(train_qid_index), len(eval_qid_index)))
+            batch += 1
+            eval_ndcg = {}
+            for i in range(maxIteration):
+                print('Batch {}, Iteration {}'.format(batch, i+1))
+                # shuffle(train_qid_index)
+                # for start in range(0, len(train_qid_index), batchsize):
+
+                    # if start + batchsize > len(train_qid_index):
+                    #     train_data_qid = [train_qid_unique[x] for x in train_qid_index[start:]]
+                    #     # print('len of train {}'.format(len(train_data_qid))
+                    # else:
+                    #     train_data_qid = [train_qid_unique[x] for x in train_qid_index[start:start+batchsize]]
+                    #     # print('len of train {}'.format(len(train_data_qid))
                 
+                train_data_qid = randomSampleKfold(train_qid_unique, train_qid_index)
                 eval_data_qid = randomSampleKfold(train_qid_unique, eval_qid_index)
 
                 print('Train DMatrix')
@@ -125,11 +137,17 @@ if __name__=="__main__":
                 passRank = xgb.train(params, train_dmatrix,
                         evals=[(eval_dmatrix, 'validation')], evals_result = eval_ndcg, xgb_model=passRank )
             
-                print(eval_ndcg['validation'], eval_ndcg['validation'][-1])
+            print('Batch {}, Metrics History are {} '.format(i, eval_ndcg['validation'], eval_ndcg['validation']['map'][-1]))
+        
+        if eval_ndcg['validation']['map'][-1] > cur_acc:
+            best_model = passRank
+            best_param = params
 
 
-        break
+            # break
 
+    print('Best params setting ', best_param)
+    print('Best xgb ranker model ', best_model)
     '''
     
 

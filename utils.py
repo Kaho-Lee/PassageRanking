@@ -34,7 +34,7 @@ def ExtractPreTrained(pre_trained_model_path, stored_path):
 def IDFOfDataSet(path, name):
     print('Generating IDF of current dataset!!!')
     reader = pd.read_csv(path, sep='\t')
-    stop_words = set(stopwords.words('english'))
+    # stop_words = set(stopwords.words('english'))
     idf = {}
     df = {}
 
@@ -46,9 +46,11 @@ def IDFOfDataSet(path, name):
         idf[id] = {}
         df = {}
         for i, row in qid_reader.iterrows():
-            passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['passage'].lower()).split(' ')
+            # passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['passage'].lower()).split(' ')
+            passage_lst = re.split('(\W)', row['passage'].lower())
             for term in passage_lst:
-                if term not in stop_words and term != '':
+                # if term not in stop_words and term != '':
+                if term != '':
                     if term not in idf[id]:
                         idf[id][term] = 1
                         df[term] = set()
@@ -65,8 +67,6 @@ def IDFOfDataSet(path, name):
     with open(name, 'w') as writeFile:
         json.dump(idf, writeFile)
     writeFile.close()
-
-
 
 
 
@@ -149,11 +149,27 @@ def accuracy(y, y_pred):
     acc = np.sum(check)/num
     return acc
 
-def generateEmbedding(embedding, query, passage):
+def generateEmbedding(embedding, query, passage, idf):
     stemmer = SnowballStemmer("english") 
     stop_words = set(stopwords.words('english')) 
     query_term_count = 0
     query_embedding = np.zeros(50)
+
+    #tf calculation
+    query_tf = {}
+    for term in query:
+        if term not in query_tf:
+            query_tf[term] = 1
+        else:
+            query_tf[term] += 1
+
+    pass_tf = {}
+    for term in passage:
+        if term not in pass_tf:
+            pass_tf[term] = 1
+        else:
+            pass_tf[term] += 1
+
     for term in query:
         # if term not in stop_words:
             
@@ -161,15 +177,34 @@ def generateEmbedding(embedding, query, passage):
 
         if term in embedding:
             norm_embedding = np.array(embedding[term])
-            norm_embedding = norm_embedding/np.linalg.norm(norm_embedding)
-            query_embedding += norm_embedding
+            try:
+                norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * (0.001 + query_tf[term]*np.log2(idf[term]))
+                query_embedding += norm_embedding
+            except KeyError as e:
+
+                norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * 0.001
+                query_embedding += norm_embedding
+
+                # print(idf)
+                # print(term)
+                # if term in idf:
+                #     print(True)
+                # else:
+                #     print(False)
+                # print('\n')
+                
         else:
             #print('Not Found: ', term)
             new_term = stemmer.stem(term)
             if new_term in embedding:
                 norm_embedding = np.array(embedding[new_term])
-                norm_embedding = norm_embedding/np.linalg.norm(norm_embedding)
-                query_embedding += norm_embedding
+                try:
+                    norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * (0.001 + query_tf[term]*np.log2(idf[term]))
+                    query_embedding += norm_embedding
+                except KeyError as e:
+
+                    norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * 0.001
+                    query_embedding += norm_embedding
             # else:
             #     spec_vector = np.zeros(50) -1
             #     spec_vector = spec_vector/np.linalg.norm(spec_vector)
@@ -187,14 +222,14 @@ def generateEmbedding(embedding, query, passage):
 
         if term in embedding:
             norm_embedding = np.array(embedding[term])
-            norm_embedding = norm_embedding/np.linalg.norm(norm_embedding)
+            norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * (0.001 + pass_tf[term]*np.log2(idf[term]))
             passage_embedding += norm_embedding
         else:
             #print('Not Found: ', term)
             new_term = stemmer.stem(term)
             if new_term in embedding:
                 norm_embedding = np.array(embedding[new_term])
-                norm_embedding = norm_embedding/np.linalg.norm(norm_embedding)
+                norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * (0.001 + pass_tf[term]*np.log2(idf[term]))
                 passage_embedding += norm_embedding
             #print('P-Still Not Found: ', new_term)
             # else:
@@ -235,11 +270,19 @@ def log_freqWeighting(query_lst, passage_lst, idf):
             else:
                 pass_dict[term] += 1
     
+    # tf_idf = []
     for term in query_lst:
         if term not in stop_words:
             if term in pass_dict:
+                # tf_idf.append(pass_dict[term] * np.log10(idf[term]))
                 # score += pass_dict[term] * np.log10(idf[term])
                 score += 1 + np.log10(pass_dict[term])
+                # score += 1
+    # tf_idf = np.array(tf_idf)
+    # if np.linalg.norm(tf_idf) == 0:
+    #     score = 0
+    # else:
+    #     score = np.sum(tf_idf/np.linalg.norm(tf_idf))
 
     return np.atleast_2d(np.array(score))
 
@@ -258,11 +301,11 @@ def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val'):
         # passage = word_tokenize(row['passage'].lower())
         #print(passage)
 
-        query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['queries'].lower()).split(' ')
-        passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['passage'].lower()).split(' ')
+        # query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['queries'].lower()).split(' ')
+        # passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['passage'].lower()).split(' ')
 
         query_passage_embedding = generateEmbedding(embedding, query, passage)
-        log_freq = log_freqWeighting(query_lst, passage_lst, val_idf)
+        log_freq = log_freqWeighting(query, passage, val_idf)
         query_passage_embedding = np.hstack((query_passage_embedding, log_freq))
 
         cur_pid = np.atleast_2d(row['pid'])

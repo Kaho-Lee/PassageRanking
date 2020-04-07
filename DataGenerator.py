@@ -76,9 +76,9 @@ class dataPipeLine:
             query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['queries'].lower()).split(' ')
             passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['passage'].lower()).split(' ')
 
-            query_passage_embedding = generateEmbedding(self.embedding, query, passage)
-
             qid = str(row['qid'])
+            query_passage_embedding = generateEmbedding(self.embedding, query, passage, self.idf[qid])
+            
             log_freq = log_freqWeighting(query_lst, passage_lst, self.idf[qid])
             query_passage_embedding = np.hstack((query_passage_embedding, log_freq))
 
@@ -108,8 +108,9 @@ class dataPipeLine:
             query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['queries'].lower()).split(' ')
             passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['passage'].lower()).split(' ')
 
-            query_passage_embedding = generateEmbedding(self.embedding, query, passage)
             qid = str(row['qid'])
+            query_passage_embedding = generateEmbedding(self.embedding, query, passage, self.idf[qid])
+            
             log_freq = log_freqWeighting(query_lst, passage_lst, self.idf[qid])
             query_passage_embedding = np.hstack((query_passage_embedding, log_freq))
 
@@ -226,9 +227,9 @@ class dataPipeLine:
 
             query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['queries'].lower()).split(' ')
             passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['passage'].lower()).split(' ')
-
-            query_passage_embedding = generateEmbedding(self.embedding, query, passage)
             qid = str(row['qid'])
+            query_passage_embedding = generateEmbedding(self.embedding, query, passage, self.idf[qid])
+            
             log_freq = log_freqWeighting(query_lst, passage_lst, self.idf[qid])
             query_passage_embedding = np.hstack((query_passage_embedding, log_freq))
 
