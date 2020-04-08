@@ -64,11 +64,15 @@ if __name__=="__main__":
 
     #from xgb sample code https://github.com/dmlc/xgboost/blob/master/demo/rank/rank.py
     params_ndcg_e1 = {'objective': 'rank:ndcg', 'eta': 0.1, 'gamma': 1.0,
-          'min_child_weight': 0.1, 'max_depth': 6}
+          'min_child_weight': 0.1, 'max_depth': 6, 'eval_metric'='ndcg'}
     params_ndcg_e2 = {'objective': 'rank:ndcg', 'eta': 0.05, 'gamma': 1.0,
-          'min_child_weight': 0.1, 'max_depth': 6}
-    params_ndcg_e = {'objective': 'rank:ndcg', 'eta': 1, 'gamma': 0.1,
-          'min_child_weight': 0.1, 'max_depth': 6}
+          'min_child_weight': 0.1, 'max_depth': 6, 'eval_metric'='ndcg'}
+    params_ndcg_e = {'objective': 'rank:ndcg', 'eta': 1, 'gamma': 1.0,
+          'min_child_weight': 0.1, 'max_depth': 6, 'eval_metric'='ndcg'}
+    params_ndcg_d9 = {'objective': 'rank:ndcg', 'eta': 0.1, 'gamma': 0.1,
+        'min_child_weight': 0.1, 'max_depth': 9, 'eval_metric'='ndcg'}
+    params_ndcg_g_e1 = {'objective': 'rank:ndcg', 'eta': 1, 'gamma': 0.1,
+          'min_child_weight': 0.1, 'max_depth': 6, 'eval_metric'='ndcg'}
     
     params_pairwise_e1 = {'objective': 'rank:pairwise', 'eta': 0.1, 'gamma': 1.0,
           'min_child_weight': 0.1, 'max_depth': 6}
@@ -76,10 +80,13 @@ if __name__=="__main__":
           'min_child_weight': 0.1, 'max_depth': 6}
 
 
-    params_dict = {'params_ndcg_e': params_ndcg_e, 'params_ndcg_e1': params_ndcg_e1, 
-    'params_ndcg_e2':params_ndcg_e2, 'params_pairwise_e1':params_pairwise_e1, 'params_pairwise_e2':params_pairwise_e2}
+    # params_dict = {'params_ndcg_e': params_ndcg_e, 'params_ndcg_e1': params_ndcg_e1, 
+    # 'params_ndcg_e2':params_ndcg_e2, 'params_pairwise_e1':params_pairwise_e1, 'params_pairwise_e2':params_pairwise_e2}
 
-    params_dict = {'params_ndcg_e': params_ndcg_e}
+    params_dict = {'params_ndcg_e': params_ndcg_e, 'params_ndcg_e1': params_ndcg_e1, 
+    'params_ndcg_e2':params_ndcg_e2, 'params_ndcg_d9': params_ndcg_d9, 'params_ndcg_g_e1': params_ndcg_g_e1}
+
+    # params_dict = {'params_ndcg_e': params_ndcg_e}
 
     kf = KFold(n_splits=5, random_state=None, shuffle=False)
 

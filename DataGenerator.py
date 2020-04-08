@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import json
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import tqdm
 import csv
@@ -64,77 +65,97 @@ class dataPipeLine:
         cos_sum = 0
         count = 0 
         dist_sum = 0
+        tf_idf_sum = 0
         relavancePot = []
         print('cal relavence sim')
         for i, row in relevancy_lines.iterrows():
-            query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
-            # query = word_tokenize(row['queries'].lower())
-            #print(query)
-            passage = re.split('(\W)', row['passage'].lower())
-            # passage = word_tokenize(row['passage'].lower())
-            #print(passage)
-            query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['queries'].lower()).split(' ')
-            passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['passage'].lower()).split(' ')
+
+            query_raw = row['queries'].lower()
+            passage_raw = row['passage'].lower()
 
             qid = str(row['qid'])
-            query_passage_embedding = generateEmbedding(self.embedding, query, passage, self.idf[qid])
+            query_passage_embedding = generateEmbedding(self.embedding, query_raw, passage_raw, self.idf[qid])
             
-            log_freq = log_freqWeighting(query_lst, passage_lst, self.idf[qid])
+            log_freq = log_freqWeighting(query_raw, passage_raw, self.idf[qid])
             query_passage_embedding = np.hstack((query_passage_embedding, log_freq))
 
             cos_sum += query_passage_embedding[0,1]
-            dist_sum += query_passage_embedding[0,2]
+            # dist_sum += query_passage_embedding[0,2]
+            tf_idf_sum += query_passage_embedding[0,2]
             count += 1
             relavancePot.append(query_passage_embedding[0, 1:])
         relavancePot = np.array(relavancePot)
+        num_relavance = relavancePot.shape[0]
         print(relavancePot.shape)
         self.relavanceCos = cos_sum/count
-        self.relavanceDist = dist_sum/count
+        # self.relavanceDist = dist_sum/count
+        self.relavanceTFIDF = tf_idf_sum/count
 
         relevancy_lines = reader[reader.relevancy.eq(0.0)]
         cos_sum = 0
         count = 0 
         dist_sum = 0
+        tf_idf_sum = 0
         non_relavancePot = []
         print('cal non relavence sim')
-        sample_reader = relevancy_lines.sample(int(relevancy_lines.shape[0]*0.01))
+        sample_reader = relevancy_lines.sample(int(relevancy_lines.shape[0]*0.005))
         for i, row in sample_reader.iterrows():
-            query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
-            # query = word_tokenize(row['queries'].lower())
-            #print(query)
-            passage = re.split('(\W)', row['passage'].lower())
-            # passage = word_tokenize(row['passage'].lower())
-            #print(passage)
-            query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['queries'].lower()).split(' ')
-            passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['passage'].lower()).split(' ')
+
+            query_raw = row['queries'].lower()
+            passage_raw = row['passage'].lower()
 
             qid = str(row['qid'])
-            query_passage_embedding = generateEmbedding(self.embedding, query, passage, self.idf[qid])
+            query_passage_embedding = generateEmbedding(self.embedding, query_raw, passage_raw, self.idf[qid])
             
-            log_freq = log_freqWeighting(query_lst, passage_lst, self.idf[qid])
+            log_freq = log_freqWeighting(query_raw, passage_raw, self.idf[qid])
             query_passage_embedding = np.hstack((query_passage_embedding, log_freq))
 
             cos_sum += query_passage_embedding[0,1]
-            dist_sum += query_passage_embedding[0,2]
+            # dist_sum += query_passage_embedding[0,2]
+            tf_idf_sum += query_passage_embedding[0,2]
             count += 1
             non_relavancePot.append(query_passage_embedding[0, 1:])
 
         non_relavancePot = np.array(non_relavancePot)
         print(non_relavancePot.shape)
+        
         self.nonrelavanceCos = cos_sum/count
-        self.nonrelavanceDist = dist_sum/count
+        # self.nonrelavanceDist = dist_sum/count
+        self.nonrelavanceTFIDF = tf_idf_sum/count
 
         print('Cos: relevance {}, non relevance {}'.format(self.relavanceCos, self.nonrelavanceCos))
-        print('Log Freq Weights: relevance {}, non relevance {}'.format(self.relavanceDist, self.nonrelavanceDist))
-        label_txt = 'relavence: average Cos={}, log(tf)={}'.format(round(self.relavanceCos, 2), round(self.relavanceDist, 2))
+        # print('Dist: relevance {}, non relevance {}'.format(self.relavanceDist, self.nonrelavanceDist))
+        print('tf: relevance {}, non relevance {}'.format(self.relavanceTFIDF, self.nonrelavanceTFIDF))
+
+        # visual_embedding = np.vstack((relavancePot,non_relavancePot))
+        # print('All embedding shape ', visual_embedding.shape)
+        # visual_embedding = TSNE(n_components=2).fit_transform(visual_embedding)
+
+        label_txt = 'relavence: average cost={}, tf={}'.format(round(self.relavanceCos, 2), round(self.relavanceTFIDF, 2))
         plt.scatter(relavancePot[:,0], relavancePot[:,1], s=5, marker='x', c='r', label=label_txt)
-        label_txt = 'non-relavence: average Cos={}, log(tf)={}'.format(round(self.nonrelavanceCos, 2), round(self.nonrelavanceDist, 2))
-        plt.scatter(non_relavancePot[:,0], non_relavancePot[:,1], s=5, marker='o', facecolors='none', edgecolors='b', label=label_txt)
+        label_txt = 'non-relavence: average cos={}, tf={}'.format(round(self.nonrelavanceCos, 2), round(self.nonrelavanceTFIDF, 2))
+        plt.scatter(non_relavancePot[:,0], non_relavancePot[:,1], s=2, marker='o', facecolors='none', edgecolors='b', label=label_txt)
         plt.legend()
         plt.xlabel('Cos Similarity')
         plt.ylabel('Log Freq')
-        plt.savefig('Visual_cos_logWeight.png')
-        #plt.show()
+        plt.savefig('Visual_dist_logWeight.png')
+        # plt.show()
+
+        # print('shape check ', relavancePot[:,0].shape, non_relavancePot[:,0].shape)
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+        # label_txt = 'relavence: average Cos={}, tf*idf={}, dist={}'.format(round(self.relavanceCos, 2), round(self.relavanceTFIDF, 2), round(self.relavanceDist, 2))
+        # ax.scatter(relavancePot[:,0], relavancePot[:,1], relavancePot[:,2], c='r', marker='x', label = label_txt )
+        # label_txt = 'non-relavence: average Cos={}, tf*idf={}, dist={}'.format(round(self.nonrelavanceCos, 2), round(self.nonrelavanceTFIDF, 2), round(self.nonrelavanceDist, 2))
+        # ax.scatter(non_relavancePot[:,0], non_relavancePot[:,1], non_relavancePot[:,2], edgecolors='b', marker='o', label = label_txt )
+        
+        # # ax.scatter(non_relavancePot[:,0], non_relavancePot[:,1], non_relavancePot[:,2], marker='o', edgecolors='b', label = label_txt )
+        # ax.set_xlabel('Cos Similarity')
+        # ax.set_ylabel('Euclidean Distance')
+        # ax.set_zlabel('TF-IDF')
+        # plt.legend()
+        # plt.savefig('Visual_cos_dist_tfidf.png')
+        # plt.show()
 
     def VisualEmbedding(self):
         reader = pd.read_csv(self.train_path, sep='\t')
@@ -195,10 +216,12 @@ class dataPipeLine:
         plt.ylabel('TSNE Dim 1')
         plt.savefig('queryTSNEVisual_PCA50.png')
         #plt.show()
-        aa= tt
 
-    def randomChoice_unbalancedData(self, batch_size):
-        pos = max(0.5, self.pos)
+    def randomChoice_unbalancedData(self, batch_size, oversample=True):
+        if oversample:
+            pos = max(0.5, self.pos)
+        else:
+            pos = max(0.1, self.pos)
         random_pos_line = max(1, int(pos*batch_size))
         
         temp = np.random.choice(len(self.relavancePass), random_pos_line, replace=False)
@@ -218,19 +241,14 @@ class dataPipeLine:
         skip = [x for x in allRows if x not in vectorize_index ]
         reader = pd.read_csv(self.train_path, sep='\t', skiprows=skip)
         for i, row in reader.iterrows():
-            query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
-            # query = word_tokenize(row['queries'].lower())
-            #print(query)
-            passage = re.split('(\W)', row['passage'].lower())
-            # passage = word_tokenize(row['passage'].lower())
-            #print(passage)
 
-            query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['queries'].lower()).split(' ')
-            passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['passage'].lower()).split(' ')
+            query_raw = row['queries'].lower()
+            passage_raw = row['passage'].lower()
+
             qid = str(row['qid'])
-            query_passage_embedding = generateEmbedding(self.embedding, query, passage, self.idf[qid])
+            query_passage_embedding = generateEmbedding(self.embedding, query_raw, passage_raw, self.idf[qid])
             
-            log_freq = log_freqWeighting(query_lst, passage_lst, self.idf[qid])
+            log_freq = log_freqWeighting(query_raw, passage_raw, self.idf[qid])
             query_passage_embedding = np.hstack((query_passage_embedding, log_freq))
 
             cur_label = np.atleast_2d(np.array(row['relevancy']))

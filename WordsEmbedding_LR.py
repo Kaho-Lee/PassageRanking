@@ -36,11 +36,11 @@ class LogisticRegressor:
         grad = x.T @ (sigmoid(theta) - y)
         return np.sum(grad)
 
-    def train(self, dataGenerator, batch_size = 300):
+    def train(self, dataGenerator, batch_size = 600):
         
         #self.weights = np.zeros(100)
         
-        maxIteration = 100
+        maxIteration = 200
         tolerance = 0.001
         prev_loss = 0
         cur_iteration = 0
@@ -79,7 +79,7 @@ class LogisticRegressor:
                 y_pred = np.round(self.predict(x))
                 print('Batch: x {} y {}'.format(x.shape, y.shape))
                 acc = accuracy(y, y_pred)
-                print('Iteration {}: current loss is {}, accuracy is {}'.format(cur_iteration, loss, acc))
+                print('Iteration {}: Train current loss is {}, Val accuracy is {}'.format(cur_iteration, loss, acc))
 
             cur_iteration += 1
             loss_lst.append(loss)
@@ -190,6 +190,11 @@ if __name__=="__main__":
         IDFOfDataSet(val_path, idf_val)
 
     data = dataPipeLine(gloveEmbedding_path, train_path, idf_train)
+
+    try:
+        os.remove('LR.txt')
+    except OSError:
+        pass
     
     parameters = {}
     mode = 'train'
@@ -206,6 +211,7 @@ if __name__=="__main__":
         # a = data.randomChoice_unbalancedData( 10)
         # print(a)
 
+    
 
     with open(gloveEmbedding_path, 'r') as readFile:
             embedding = json.load(readFile)

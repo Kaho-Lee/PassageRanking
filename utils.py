@@ -11,6 +11,7 @@ from nltk.stem import PorterStemmer, SnowballStemmer
 from nltk.corpus import stopwords 
 # import nltk
 from nltk.tokenize import word_tokenize 
+from sklearn.manifold import TSNE
 #nltk.download('stopwords')
 
 def ExtractPreTrained(pre_trained_model_path, stored_path):
@@ -155,6 +156,20 @@ def generateEmbedding(embedding, query, passage, idf):
     query_term_count = 0
     query_embedding = np.zeros(50)
 
+    rawq = query
+    rawp = passage
+    # query = re.split('(\W)', rawq)
+    query = re.sub("(\W)", ' ', rawq).split(' ')
+    # query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', rawq).split(' ')
+    # passage = re.split('(\W)', rawp)
+    passage = re.sub("(\W)", ' ', rawp).split(' ')
+    # passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', rawp).split(' ')
+    # print(rawq)
+    # print(query)
+    # print(rawp)
+    # print(passage)
+    # print('\n')
+
     #tf calculation
     query_tf = {}
     for term in query:
@@ -173,17 +188,20 @@ def generateEmbedding(embedding, query, passage, idf):
     for term in query:
         # if term not in stop_words:
             
-        query_term_count += 1
+        if term != ' ' and term != '' and (term not in stop_words):#
+            query_term_count += 1
+        else:
+            continue
 
         if term in embedding:
             norm_embedding = np.array(embedding[term])
-            try:
-                norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * (0.001 + query_tf[term]*np.log2(idf[term]))
-                query_embedding += norm_embedding
-            except KeyError as e:
+            # try:
+            norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) #* ( query_tf[term]*np.log10(idf[term]))
+            query_embedding += norm_embedding
+            # except KeyError as e:
 
-                norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * 0.001
-                query_embedding += norm_embedding
+                # norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) #* 0.001
+                # query_embedding += norm_embedding
 
                 # print(idf)
                 # print(term)
@@ -198,13 +216,13 @@ def generateEmbedding(embedding, query, passage, idf):
             new_term = stemmer.stem(term)
             if new_term in embedding:
                 norm_embedding = np.array(embedding[new_term])
-                try:
-                    norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * (0.001 + query_tf[term]*np.log2(idf[term]))
-                    query_embedding += norm_embedding
-                except KeyError as e:
+                # try:
+                norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) #* ( query_tf[term]*np.log10(idf[term]))
+                query_embedding += norm_embedding
+                # except KeyError as e:
 
-                    norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * 0.001
-                    query_embedding += norm_embedding
+                    # norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) #* 0.001
+                    # query_embedding += norm_embedding
             # else:
             #     spec_vector = np.zeros(50) -1
             #     spec_vector = spec_vector/np.linalg.norm(spec_vector)
@@ -217,54 +235,60 @@ def generateEmbedding(embedding, query, passage, idf):
     passage_embedding = np.zeros(50)
     for term in passage:
         # if term not in stop_words:
-            
-        passage_term_count += 1
+        if term != ' ' and term != '' and (term not in stop_words):#
+            passage_term_count += 1
+        else:
+            continue
 
         if term in embedding:
             norm_embedding = np.array(embedding[term])
-            norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * (0.001 + pass_tf[term]*np.log2(idf[term]))
+            norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * ( pass_tf[term]*np.log10(idf[term]))
             passage_embedding += norm_embedding
         else:
             #print('Not Found: ', term)
             new_term = stemmer.stem(term)
             if new_term in embedding:
                 norm_embedding = np.array(embedding[new_term])
-                norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * (0.001 + pass_tf[term]*np.log2(idf[term]))
+                norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) * ( pass_tf[term]*np.log10(idf[term]))
                 passage_embedding += norm_embedding
-            #print('P-Still Not Found: ', new_term)
-            # else:
-            #     spec_vector = np.zeros(50) -1
-            #     spec_vector = spec_vector/np.linalg.norm(spec_vector)
-            #     passage_embedding += spec_vector
 
     passage_embedding = passage_embedding/passage_term_count
 
     if passage_term_count == 0  or query_term_count ==0:
-        print('query {} passage {}'.format(query_term_count, passage_term_count))
-        print(query)
-        print(passage)
+        # print('Count: query {} passage {}'.format(query_term_count, passage_term_count))
+        # print(query)
+        # print(passage)
         cos_sim = [0]
-    if np.linalg.norm(passage_embedding) == 0.0 or np.linalg.norm(query_embedding)==0.0:
-        print('query {} passage {}'.format(np.linalg.norm(query_embedding), np.linalg.norm(passage_embedding)))
-        print(query)
-        print(passage)
+    elif np.linalg.norm(passage_embedding) == 0.0 or np.linalg.norm(query_embedding)==0.0:
+        # print('Norm: query {} passage {}'.format(np.linalg.norm(query_embedding), np.linalg.norm(passage_embedding)))
+        # print(query)
+        # print(passage)
         cos_sim = [0]
     else:
         cos_sim = (passage_embedding @ np.atleast_2d(query_embedding).T)/(np.linalg.norm(passage_embedding)*np.linalg.norm(query_embedding))
-    
-    query_passage_embedding = np.array([1, cos_sim[0]])
+
+    # dist = np.linalg.norm(passage_embedding - query_embedding)
+    query_passage_embedding = np.array([1, cos_sim[0]]) 
     
     # query_passage_embedding = np.hstack((query_embedding, passage_embedding))
     # query_passage_embedding = np.hstack((query_passage_embedding, [1]))
     
     return np.atleast_2d( query_passage_embedding)
 
-def log_freqWeighting(query_lst, passage_lst, idf):
+def log_freqWeighting(query, passage, idf):
+    rawq = query
+    rawp = passage
+    query_lst = re.split('(\W)', rawq)
+    # query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', rawq).split(' ')
+    passage_lst = re.split('(\W)', rawp)
+    # passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', rawp).split(' ')
+
     stop_words = set(stopwords.words('english')) 
     score = 0
     pass_dict = {}
     for term in passage_lst:
-        if term not in stop_words and term != '':
+        # if term not in stop_words and term != '':
+        if term != '' and term != ' ':
             if term not in pass_dict:
                 pass_dict[term] = 1
             else:
@@ -272,17 +296,20 @@ def log_freqWeighting(query_lst, passage_lst, idf):
     
     # tf_idf = []
     for term in query_lst:
-        if term not in stop_words:
+        # if term not in stop_words:
             if term in pass_dict:
                 # tf_idf.append(pass_dict[term] * np.log10(idf[term]))
                 # score += pass_dict[term] * np.log10(idf[term])
                 score += 1 + np.log10(pass_dict[term])
                 # score += 1
-    # tf_idf = np.array(tf_idf)
-    # if np.linalg.norm(tf_idf) == 0:
-    #     score = 0
-    # else:
-    #     score = np.sum(tf_idf/np.linalg.norm(tf_idf))
+    
+    # cos normalize
+    # cos_normalizer = 0
+    # for term in passage_lst:
+    #     if term != '' and term != ' ':
+    #         # cos_normalizer += 1 + np.log10(pass_dict[term])
+    #         cos_normalizer += (pass_dict[term] * np.log10(idf[term]))**2
+    # score = score/np.sqrt(cos_normalizer)
 
     return np.atleast_2d(np.array(score))
 
@@ -294,17 +321,13 @@ def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val'):
     dict_empty = True
 
     for i, row in candidate_pass.iterrows():
-        query = re.split('(\W)', row['queries'].lower()) #sperate the string by non-word character
-        # query = word_tokenize(row['queries'].lower())
+        query = row['queries'].lower()
         #print(query)
-        passage = re.split('(\W)', row['passage'].lower())
-        # passage = word_tokenize(row['passage'].lower())
+        passage = row['passage'].lower()
+        
         #print(passage)
-
-        # query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['queries'].lower()).split(' ')
-        # passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', row['passage'].lower()).split(' ')
-
-        query_passage_embedding = generateEmbedding(embedding, query, passage)
+        # qid = str(row['qid'])
+        query_passage_embedding = generateEmbedding(embedding, query, passage, val_idf)
         log_freq = log_freqWeighting(query, passage, val_idf)
         query_passage_embedding = np.hstack((query_passage_embedding, log_freq))
 
