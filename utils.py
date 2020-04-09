@@ -195,39 +195,16 @@ def generateEmbedding(embedding, query, passage, idf):
 
         if term in embedding:
             norm_embedding = np.array(embedding[term])
-            # try:
             norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) #* ( query_tf[term]*np.log10(idf[term]))
             query_embedding += norm_embedding
-            # except KeyError as e:
-
-                # norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) #* 0.001
-                # query_embedding += norm_embedding
-
-                # print(idf)
-                # print(term)
-                # if term in idf:
-                #     print(True)
-                # else:
-                #     print(False)
-                # print('\n')
                 
         else:
             #print('Not Found: ', term)
             new_term = stemmer.stem(term)
             if new_term in embedding:
                 norm_embedding = np.array(embedding[new_term])
-                # try:
                 norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) #* ( query_tf[term]*np.log10(idf[term]))
                 query_embedding += norm_embedding
-                # except KeyError as e:
-
-                    # norm_embedding = (norm_embedding/np.linalg.norm(norm_embedding)) #* 0.001
-                    # query_embedding += norm_embedding
-            # else:
-            #     spec_vector = np.zeros(50) -1
-            #     spec_vector = spec_vector/np.linalg.norm(spec_vector)
-            #     query_embedding += spec_vector
-            #print('Q-Still Not Found: ', new_term)
 
     query_embedding = query_embedding/query_term_count
 
@@ -268,7 +245,10 @@ def generateEmbedding(embedding, query, passage, idf):
         cos_sim = (passage_embedding @ np.atleast_2d(query_embedding).T)/(np.linalg.norm(passage_embedding)*np.linalg.norm(query_embedding))
 
     # dist = np.linalg.norm(passage_embedding - query_embedding)
-    query_passage_embedding = np.array([1, cos_sim[0]]) 
+
+    tf = log_freqWeighting(rawq, rawp, idf)
+
+    query_passage_embedding = np.array([1, cos_sim[0], tf]) 
     
     # query_passage_embedding = np.hstack((query_embedding, passage_embedding))
     # query_passage_embedding = np.hstack((query_passage_embedding, [1]))
@@ -287,14 +267,13 @@ def log_freqWeighting(query, passage, idf):
     score = 0
     pass_dict = {}
     for term in passage_lst:
-        # if term not in stop_words and term != '':
+        # if term not in stop_words:
         if term != '' and term != ' ':
             if term not in pass_dict:
                 pass_dict[term] = 1
             else:
                 pass_dict[term] += 1
     
-    # tf_idf = []
     for term in query_lst:
         # if term not in stop_words:
             if term in pass_dict:
@@ -311,16 +290,38 @@ def log_freqWeighting(query, passage, idf):
     #         cos_normalizer += (pass_dict[term] * np.log10(idf[term]))**2
     # score = score/np.sqrt(cos_normalizer)
 
-    return np.atleast_2d(np.array(score))
+    return score
 
-def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val'):
+def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val', downSampling=False, downSampleRate=0.1):
     
     candidate_pass = val_reader[val_reader.qid.eq(int(queryID))]
     # print(candidate_pass.shape)
     # print(candidate_pass)
     dict_empty = True
+    # print('can reader')
+    # print(candidate_pass)
+
+    if downSampling:
+        num_line = candidate_pass.shape[0]
+        # print('num line ', num_line)
+        index = np.random.choice(num_line, int(num_line*downSampleRate), replace=False)
+        row_indx_lst = candidate_pass.index.tolist()
+        selected_row = [row_indx_lst[x] for x in index]
+        relavance_row = candidate_pass.relevancy.eq(1.0).index.tolist()[0]
+        selected_row.append(relavance_row)
+        # print()
+        # allRows = np.arange(1, num_line+1)
+        # vectorize_index = np.array(index)
+        #print('check choices ',vectorize_index)
+        # skip = [x for x in allRows if x not in vectorize_index ]
+        candidate_pass = candidate_pass[candidate_pass.index.isin(selected_row)]
+        # print(queryID)
+        # print('unique ', candidate_pass.qid.unique().tolist(), candidate_pass.shape)
+        # print(candidate_pass)
+        # a=t
 
     for i, row in candidate_pass.iterrows():
+
         query = row['queries'].lower()
         #print(query)
         passage = row['passage'].lower()
@@ -328,8 +329,6 @@ def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val'):
         #print(passage)
         # qid = str(row['qid'])
         query_passage_embedding = generateEmbedding(embedding, query, passage, val_idf)
-        log_freq = log_freqWeighting(query, passage, val_idf)
-        query_passage_embedding = np.hstack((query_passage_embedding, log_freq))
 
         cur_pid = np.atleast_2d(row['pid'])
         cur_label = np.atleast_2d(row['relevancy'])

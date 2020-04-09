@@ -33,12 +33,12 @@ class dataPipeLine:
         self.num_line = self.__length__(train_path)
         print('num lines ', self.num_line)
         
-        reader = pd.read_csv(self.train_path, sep='\t')
+        self.reader = pd.read_csv(self.train_path, sep='\t')
         #print(reader)
-        relevancy_lines = reader[reader.relevancy.eq(1.0)]
+        relevancy_lines = self.reader[self.reader.relevancy.eq(1.0)]
         #print(relevancy_lines)
         self.relavancePass = relevancy_lines.index.tolist()
-        non_relavancy_line = reader[reader.relevancy.eq(0.0)]
+        non_relavancy_line = self.reader[self.reader.relevancy.eq(0.0)]
         self.pos = relevancy_lines.shape[0]/self.num_line
         print('pos ', self.pos)
         self.neg = non_relavancy_line.shape[0]/self.num_line
@@ -75,9 +75,6 @@ class dataPipeLine:
 
             qid = str(row['qid'])
             query_passage_embedding = generateEmbedding(self.embedding, query_raw, passage_raw, self.idf[qid])
-            
-            log_freq = log_freqWeighting(query_raw, passage_raw, self.idf[qid])
-            query_passage_embedding = np.hstack((query_passage_embedding, log_freq))
 
             cos_sum += query_passage_embedding[0,1]
             # dist_sum += query_passage_embedding[0,2]
@@ -106,9 +103,6 @@ class dataPipeLine:
 
             qid = str(row['qid'])
             query_passage_embedding = generateEmbedding(self.embedding, query_raw, passage_raw, self.idf[qid])
-            
-            log_freq = log_freqWeighting(query_raw, passage_raw, self.idf[qid])
-            query_passage_embedding = np.hstack((query_passage_embedding, log_freq))
 
             cos_sum += query_passage_embedding[0,1]
             # dist_sum += query_passage_embedding[0,2]
@@ -247,9 +241,6 @@ class dataPipeLine:
 
             qid = str(row['qid'])
             query_passage_embedding = generateEmbedding(self.embedding, query_raw, passage_raw, self.idf[qid])
-            
-            log_freq = log_freqWeighting(query_raw, passage_raw, self.idf[qid])
-            query_passage_embedding = np.hstack((query_passage_embedding, log_freq))
 
             cur_label = np.atleast_2d(np.array(row['relevancy']))
             if i == 0:
@@ -262,3 +253,54 @@ class dataPipeLine:
         #print(batch_query_pass_embedding.shape, batch_query_pass_labels.shape)
         # print(batch_query_pass_labels)
         return batch_query_pass_embedding, batch_query_pass_labels
+
+    def getItemByGroup(self, queryID, mode='val', downSampling=False, downSampleRate=0.1):
+        candidate_pass = self.reader[self.reader.qid.eq(int(queryID))]
+        # print(candidate_pass.shape)
+        # print(candidate_pass)
+        dict_empty = True
+
+        if downSampling:
+            num_line = candidate_pass.shape[0]
+            index = self.randomChoice_unbalancedData(int(num_line*downSampleRate))
+            allRows = np.arange(1, num_line+1)
+            # vectorize_index = np.array(index)
+            #print('check choices ',vectorize_index)
+            # skip = [x for x in allRows if x not in vectorize_index ]
+            reader  = candidate_pass[candidate_pass.index.isin(index)]
+            print(queryID)
+            print(reader)
+            # a = t
+            # reader = pd.read_csv(self.train_path, sep='\t', skiprows=skip)
+
+        for i, row in candidate_pass.iterrows():
+            # if downSampling:
+            #     if np.random.uniform(0,1, 1) > downSampleRate:
+            #         continue
+
+            query = row['queries'].lower()
+            #print(query)
+            passage = row['passage'].lower()
+            
+            #print(passage)
+            # qid = str(row['qid'])
+            query_passage_embedding = generateEmbedding(embedding, query, passage, val_idf)
+
+            cur_pid = np.atleast_2d(row['pid'])
+            cur_label = np.atleast_2d(row['relevancy'])
+            if dict_empty:
+                dict_empty = False
+                batch_pid = cur_pid
+                batch_label = cur_label
+                batch_query_pass_embedding = query_passage_embedding
+                #print(batch_pid)
+            else:
+                batch_pid = np.vstack((batch_pid, cur_pid))
+                batch_label = np.vstack((batch_label, cur_label))
+                batch_query_pass_embedding = np.vstack((batch_query_pass_embedding, query_passage_embedding))
+
+        #print(batch_query_pass_embedding.shape)
+        if mode == 'val':
+            return batch_pid, batch_query_pass_embedding
+        elif mode == 'Train':
+            return batch_label, batch_query_pass_embedding

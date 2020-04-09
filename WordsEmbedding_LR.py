@@ -191,10 +191,7 @@ if __name__=="__main__":
 
     data = dataPipeLine(gloveEmbedding_path, train_path, idf_train)
 
-    try:
-        os.remove('LR.txt')
-    except OSError:
-        pass
+    
     
     parameters = {}
     mode = 'train'
@@ -234,6 +231,11 @@ if __name__=="__main__":
 
     avg_precision = {}
     ndcg = {}
+
+    try:
+        os.remove('LR.txt')
+    except OSError:
+        pass
 
 
     for query_id, query_value in zip(query_raw.keys(), query_raw.values()):
