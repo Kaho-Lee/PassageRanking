@@ -75,7 +75,7 @@ def avg_Precision( results, labels):
     count = 0
     relavance = 0
     precision_lst = []
-
+    # print(list(results.keys()))
     # print('ground truth ')
     # labels = {k: v for k, v in sorted(labels.items(), \
     #     key=lambda item: item[1], reverse=True)}
@@ -150,7 +150,7 @@ def accuracy(y, y_pred):
     acc = np.sum(check)/num
     return acc
 
-def generateEmbedding(embedding, query, passage, idf):
+def generateEmbedding(embedding, query, passage, idf, raw=False):
     stemmer = SnowballStemmer("english") 
     stop_words = set(stopwords.words('english')) 
     query_term_count = 0
@@ -231,36 +231,43 @@ def generateEmbedding(embedding, query, passage, idf):
 
     passage_embedding = passage_embedding/passage_term_count
 
-    if passage_term_count == 0  or query_term_count ==0:
-        # print('Count: query {} passage {}'.format(query_term_count, passage_term_count))
-        # print(query)
-        # print(passage)
-        cos_sim = [0]
-    elif np.linalg.norm(passage_embedding) == 0.0 or np.linalg.norm(query_embedding)==0.0:
-        # print('Norm: query {} passage {}'.format(np.linalg.norm(query_embedding), np.linalg.norm(passage_embedding)))
-        # print(query)
-        # print(passage)
-        cos_sim = [0]
+    if raw:
+        embed = np.hstack((passage_embedding, query_embedding))
+        # return np.atleast_2d(embed)
+        return embed
     else:
-        cos_sim = (passage_embedding @ np.atleast_2d(query_embedding).T)/(np.linalg.norm(passage_embedding)*np.linalg.norm(query_embedding))
 
-    # dist = np.linalg.norm(passage_embedding - query_embedding)
+        if passage_term_count == 0  or query_term_count ==0:
+            # print('Count: query {} passage {}'.format(query_term_count, passage_term_count))
+            # print(query)
+            # print(passage)
+            cos_sim = [0]
+        elif np.linalg.norm(passage_embedding) == 0.0 or np.linalg.norm(query_embedding)==0.0:
+            # print('Norm: query {} passage {}'.format(np.linalg.norm(query_embedding), np.linalg.norm(passage_embedding)))
+            # print(query)
+            # print(passage)
+            cos_sim = [0]
+        else:
+            cos_sim = (passage_embedding @ np.atleast_2d(query_embedding).T)/(np.linalg.norm(passage_embedding)*np.linalg.norm(query_embedding))
 
-    tf = log_freqWeighting(rawq, rawp, idf)
+        # dist = np.linalg.norm(passage_embedding - query_embedding)
 
-    query_passage_embedding = np.array([1, cos_sim[0], tf]) 
-    
-    # query_passage_embedding = np.hstack((query_embedding, passage_embedding))
-    # query_passage_embedding = np.hstack((query_passage_embedding, [1]))
-    
-    return np.atleast_2d( query_passage_embedding)
+        tf = log_freqWeighting(query, passage, idf)
 
-def log_freqWeighting(query, passage, idf):
-    rawq = query
-    rawp = passage
-    query_lst = re.split('(\W)', rawq)
+        query_passage_embedding = np.array([1, cos_sim[0], tf]) 
+        
+        # query_passage_embedding = np.hstack((query_embedding, passage_embedding))
+        # query_passage_embedding = np.hstack((query_passage_embedding, [1]))
+        
+        # return np.atleast_2d( query_passage_embedding)
+        return  query_passage_embedding
+
+def log_freqWeighting(query_lst, passage_lst, idf):
+    # rawq = query
+    # rawp = passage
+    # query_lst = re.split('(\W)', rawq)
     # query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', rawq).split(' ')
-    passage_lst = re.split('(\W)', rawp)
+    # passage_lst = re.split('(\W)', rawp)
     # passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', rawp).split(' ')
 
     stop_words = set(stopwords.words('english')) 
@@ -292,8 +299,9 @@ def log_freqWeighting(query, passage, idf):
 
     return score
 
-def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val', downSampling=False, downSampleRate=0.1):
-    
+def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val', downSampling=False, downSampleRate=0.5, raw=False):
+    #get query passage by group
+
     candidate_pass = val_reader[val_reader.qid.eq(int(queryID))]
     # print(candidate_pass.shape)
     # print(candidate_pass)
@@ -309,9 +317,6 @@ def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val', downSamp
         selected_row = [row_indx_lst[x] for x in index]
         relavance_row = candidate_pass.relevancy.eq(1.0).index.tolist()[0]
         selected_row.append(relavance_row)
-        # print()
-        # allRows = np.arange(1, num_line+1)
-        # vectorize_index = np.array(index)
         #print('check choices ',vectorize_index)
         # skip = [x for x in allRows if x not in vectorize_index ]
         candidate_pass = candidate_pass[candidate_pass.index.isin(selected_row)]
@@ -319,7 +324,9 @@ def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val', downSamp
         # print('unique ', candidate_pass.qid.unique().tolist(), candidate_pass.shape)
         # print(candidate_pass)
         # a=t
-
+    batch_pid = []
+    batch_label = []
+    batch_query_pass_embedding = []
     for i, row in candidate_pass.iterrows():
 
         query = row['queries'].lower()
@@ -328,20 +335,27 @@ def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val', downSamp
         
         #print(passage)
         # qid = str(row['qid'])
-        query_passage_embedding = generateEmbedding(embedding, query, passage, val_idf)
+        query_passage_embedding = generateEmbedding(embedding, query, passage, val_idf, raw=raw)
 
-        cur_pid = np.atleast_2d(row['pid'])
-        cur_label = np.atleast_2d(row['relevancy'])
-        if dict_empty:
-            dict_empty = False
-            batch_pid = cur_pid
-            batch_label = cur_label
-            batch_query_pass_embedding = query_passage_embedding
-            #print(batch_pid)
-        else:
-            batch_pid = np.vstack((batch_pid, cur_pid))
-            batch_label = np.vstack((batch_label, cur_label))
-            batch_query_pass_embedding = np.vstack((batch_query_pass_embedding, query_passage_embedding))
+        cur_pid = [row['pid']]
+        cur_label = [row['relevancy']]
+        batch_pid.append(cur_pid)
+        batch_label.append(cur_label)
+        batch_query_pass_embedding.append(query_passage_embedding)
+        # if dict_empty:
+        #     dict_empty = False
+        #     batch_pid = cur_pid
+        #     batch_label = cur_label
+        #     batch_query_pass_embedding = query_passage_embedding
+        #     #print(batch_pid)
+        # else:
+        #     batch_pid = np.vstack((batch_pid, cur_pid))
+        #     batch_label = np.vstack((batch_label, cur_label))
+        #     batch_query_pass_embedding = np.vstack((batch_query_pass_embedding, query_passage_embedding))
+
+    batch_pid = np.stack(batch_pid, axis=0)
+    batch_label = np.stack(batch_label, axis=0)
+    batch_query_pass_embedding = np.stack(batch_query_pass_embedding, axis=0)
 
     #print(batch_query_pass_embedding.shape)
     if mode == 'val':

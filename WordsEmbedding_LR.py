@@ -36,7 +36,7 @@ class LogisticRegressor:
         grad = x.T @ (sigmoid(theta) - y)
         return np.sum(grad)
 
-    def train(self, dataGenerator, batch_size = 600):
+    def train(self, dataGenerator, batch_size = 800):
         
         #self.weights = np.zeros(100)
         
@@ -77,7 +77,7 @@ class LogisticRegressor:
                 choices = dataGenerator.randomChoice_unbalancedData(batch_size)
                 x, y = dataGenerator.getitem(choices)
                 y_pred = np.round(self.predict(x))
-                print('Batch: x {} y {}'.format(x.shape, y.shape))
+                print('Batch: x {} y {}, ratio {}'.format(x.shape, y.shape, np.sum(y)))
                 acc = accuracy(y, y_pred)
                 print('Iteration {}: Train current loss is {}, Val accuracy is {}'.format(cur_iteration, loss, acc))
 
@@ -92,53 +92,6 @@ class LogisticRegressor:
         with open('LR_weight.json', 'w') as writeFile:
             json.dump(temp, writeFile)
         writeFile.close()
-
-    def train2(self, dataGenerator, batch_size = 500):
-        #using sklearn Logistic Regression API to check correctness of LR implementation above
-        
-        #self.weights = np.zeros(100)
-        
-        maxIteration = 100
-        tolerance = 0.001
-        prev_loss = 0
-        cur_iteration = 0
-        eta = 0.01
-        clf = LogisticRegression(random_state=0, max_iter=10, multi_class='ovr', warm_start=True)
-
-        allRows = np.arange(1, dataGenerator.getLength()+1)
-        choices = dataGenerator.randomChoice_unbalancedData(batch_size)
-        x, y = dataGenerator.getitem(choices)
-        clf.fit(x,y)
-        # loss = np.sum(clf.predict_log_proba(x))
-        loss_lst = []
-        i = 0
-        while  i <= maxIteration:
-            # print(cur_iteration)
-            
-            print('check param estimator')
-            print(clf.coef_)
-
-            choices = dataGenerator.randomChoice_unbalancedData(batch_size)
-            x, y = dataGenerator.getitem(choices)
-            y_pred = np.atleast_2d(clf.predict(x)).T
-            acc = accuracy(y, y_pred)
-            loss = log_loss(y.T, y_pred.T)
-            print('Iteration {}:  loss is {}, accuracy is {}'.format(i, loss, acc))
-
-            choices = dataGenerator.randomChoice_unbalancedData(batch_size)
-            x, y = dataGenerator.getitem(choices)
-            clf.fit(x,y)
-            # loss = np.sum(clf.predict_log_proba(x))
-            i+= 10
-            loss_lst.append(loss)
-
-            print('pnew aram estimator')
-            print(clf.coef_)
-
-        temp = {}
-        temp[eta] = {}
-        temp[eta]['weights'] = list(self.parameters['weights'])
-        temp[eta]['loss'] = loss_lst
         
     
     def predict(self, x):
@@ -174,9 +127,6 @@ class LogisticRegressor:
 
 
 if __name__=="__main__":
-    init = False
-
-    
     pre_trained_model_path = '/Users/leekaho/Desktop/part2/glove/glove.6B.50d.txt'
     gloveEmbedding_path = '/Users/leekaho/Desktop/part2/gloveEmbedding.json'
     train_path = '/Users/leekaho/Desktop/part2/train_data.tsv'
@@ -184,19 +134,13 @@ if __name__=="__main__":
     idf_val = '/Users/leekaho/Desktop/part2/val_idf.json'
     idf_train = '/Users/leekaho/Desktop/part2/train_idf.json'
 
-    if init:
-        ExtractPreTrained(pre_trained_model_path, gloveEmbedding_path)
-        IDFOfDataSet(train_path, idf_train)
-        IDFOfDataSet(val_path, idf_val)
-
     data = dataPipeLine(gloveEmbedding_path, train_path, idf_train)
 
-    
     
     parameters = {}
     mode = 'train'
     if mode == 'train':
-        data.getSimProperty()
+        # data.getSimProperty()
         relevancy_LR = LogisticRegressor(parameters)
         relevancy_LR.train(data)
     elif mode == 'test':
@@ -209,11 +153,16 @@ if __name__=="__main__":
         # print(a)
 
     
-
+    #can be a new data pipeline
     with open(gloveEmbedding_path, 'r') as readFile:
             embedding = json.load(readFile)
     readFile.close()
+
     val_reader = pd.read_csv(val_path, sep='\t')
+
+    with open(idf_val, 'r') as readFile:
+            val_idf = json.load(readFile)
+    readFile.close()
 
     #reranking
     src_path = '/Users/leekaho/Desktop/part2/'
@@ -225,10 +174,6 @@ if __name__=="__main__":
     readFile.close()
     del temp
 
-    with open(idf_val, 'r') as readFile:
-            val_idf = json.load(readFile)
-    readFile.close()
-
     avg_precision = {}
     ndcg = {}
 
@@ -236,7 +181,6 @@ if __name__=="__main__":
         os.remove('LR.txt')
     except OSError:
         pass
-
 
     for query_id, query_value in zip(query_raw.keys(), query_raw.values()):
         print(query_id, query_value)
@@ -249,7 +193,9 @@ if __name__=="__main__":
         
 
     print('Mean value of the average precision is {}'.format(np.mean(list(avg_precision.values()))))
+    avg_precision['mean'] = np.mean(list(avg_precision.values()))
     metricToText(avg_precision, 'LR_Average_Precision')
     print('Mean value of NDCG is {}'.format(np.mean(list(ndcg.values()))))
+    ndcg['mean'] = np.mean(list(ndcg.values()))
     metricToText(ndcg, 'LR_NDCG')
 
