@@ -14,6 +14,28 @@ from nltk.tokenize import word_tokenize
 from sklearn.manifold import TSNE
 #nltk.download('stopwords')
 
+def saveToText(name, queryID, pid, y_pred):
+    candidate_ranked_pass = {}
+    for i, score in zip(pid, y_pred):
+        # print(i, score)
+        candidate_ranked_pass[str(i[0])] = score[0]
+
+    candidate_ranked_pass = {k: v for k, v in sorted(candidate_ranked_pass.items(), \
+    key=lambda item: item[1], reverse=True)}
+
+    if len(candidate_ranked_pass.keys()) <= 100:
+        reranked_candidate = candidate_ranked_pass
+    else:
+        reranked_candidate = {k: candidate_ranked_pass[k] for k in list(candidate_ranked_pass)[:100]}
+    
+    with open('{}.txt'.format(name), 'a') as writeFile:
+        rank = 1
+        for key, value in zip(reranked_candidate.keys(), reranked_candidate.values()):
+            writeFile.write('<{} A1 {} {} {} {}>\n'.format(queryID, key, rank, value, name))
+            rank += 1
+    writeFile.close()
+    return reranked_candidate
+    
 def ExtractPreTrained(pre_trained_model_path, stored_path):
     gloveEmbedding = {}
     count = 0
@@ -68,8 +90,6 @@ def IDFOfDataSet(path, name):
     with open(name, 'w') as writeFile:
         json.dump(idf, writeFile)
     writeFile.close()
-
-
 
 def avg_Precision( results, labels):
     count = 0
@@ -140,13 +160,11 @@ def sigmoid_grad(theta):
 
 def accuracy(y, y_pred):
     num = y.shape[0]
-    # print('y {}, y_pred {}'.format(y.shape, y_pred.shape))
     check = (y == y_pred)
     toSHow = np.hstack((check, y))
-    # print(toSHow.shape, y_pred.shape)
     toSHow = np.hstack((toSHow, y_pred))
     
-    # print(list(toSHow))
+    
     acc = np.sum(check)/num
     return acc
 
@@ -158,10 +176,8 @@ def generateEmbedding(embedding, query, passage, idf, raw=False):
 
     rawq = query
     rawp = passage
-    # query = re.split('(\W)', rawq)
     query = re.sub("(\W)", ' ', rawq).split(' ')
     # query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', rawq).split(' ')
-    # passage = re.split('(\W)', rawp)
     passage = re.sub("(\W)", ' ', rawp).split(' ')
     # passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', rawp).split(' ')
     # print(rawq)
@@ -186,7 +202,6 @@ def generateEmbedding(embedding, query, passage, idf, raw=False):
             pass_tf[term] += 1
 
     for term in query:
-        # if term not in stop_words:
             
         if term != ' ' and term != '' and (term not in stop_words):#
             query_term_count += 1
@@ -211,7 +226,6 @@ def generateEmbedding(embedding, query, passage, idf, raw=False):
     passage_term_count = 0
     passage_embedding = np.zeros(50)
     for term in passage:
-        # if term not in stop_words:
         if term != ' ' and term != '' and (term not in stop_words):#
             passage_term_count += 1
         else:
@@ -263,12 +277,6 @@ def generateEmbedding(embedding, query, passage, idf, raw=False):
         return  query_passage_embedding
 
 def log_freqWeighting(query_lst, passage_lst, idf):
-    # rawq = query
-    # rawp = passage
-    # query_lst = re.split('(\W)', rawq)
-    # query_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', rawq).split(' ')
-    # passage_lst = re.split('(\W)', rawp)
-    # passage_lst = re.sub("[^\sa-zA-Z0-9]+", ' ', rawp).split(' ')
 
     stop_words = set(stopwords.words('english')) 
     score = 0
@@ -317,13 +325,8 @@ def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val', downSamp
         selected_row = [row_indx_lst[x] for x in index]
         relavance_row = candidate_pass.relevancy.eq(1.0).index.tolist()[0]
         selected_row.append(relavance_row)
-        #print('check choices ',vectorize_index)
-        # skip = [x for x in allRows if x not in vectorize_index ]
         candidate_pass = candidate_pass[candidate_pass.index.isin(selected_row)]
-        # print(queryID)
-        # print('unique ', candidate_pass.qid.unique().tolist(), candidate_pass.shape)
-        # print(candidate_pass)
-        # a=t
+        
     batch_pid = []
     batch_label = []
     batch_query_pass_embedding = []
@@ -342,16 +345,6 @@ def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val', downSamp
         batch_pid.append(cur_pid)
         batch_label.append(cur_label)
         batch_query_pass_embedding.append(query_passage_embedding)
-        # if dict_empty:
-        #     dict_empty = False
-        #     batch_pid = cur_pid
-        #     batch_label = cur_label
-        #     batch_query_pass_embedding = query_passage_embedding
-        #     #print(batch_pid)
-        # else:
-        #     batch_pid = np.vstack((batch_pid, cur_pid))
-        #     batch_label = np.vstack((batch_label, cur_label))
-        #     batch_query_pass_embedding = np.vstack((batch_query_pass_embedding, query_passage_embedding))
 
     batch_pid = np.stack(batch_pid, axis=0)
     batch_label = np.stack(batch_label, axis=0)

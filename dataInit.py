@@ -1,4 +1,5 @@
 from utils import *
+from DataGenerator import dataPipeLine
 
 
 if __name__=="__main__":
@@ -16,4 +17,3 @@ if __name__=="__main__":
         ExtractPreTrained(pre_trained_model_path, gloveEmbedding_path)
         IDFOfDataSet(train_path, idf_train)
         IDFOfDataSet(val_path, idf_val)
-    

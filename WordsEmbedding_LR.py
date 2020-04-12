@@ -103,28 +103,6 @@ class LogisticRegressor:
 
         return y_pred
 
-    def saveToText(self, queryID, pid, y_pred):
-        candidate_ranked_pass = {}
-        for i, score in zip(pid, y_pred):
-            # print(i, score)
-            candidate_ranked_pass[str(i[0])] = score[0]
-
-        candidate_ranked_pass = {k: v for k, v in sorted(candidate_ranked_pass.items(), \
-        key=lambda item: item[1], reverse=True)}
-
-        if len(candidate_ranked_pass.keys()) <= 100:
-            reranked_candidate = candidate_ranked_pass
-        else:
-            reranked_candidate = {k: candidate_ranked_pass[k] for k in list(candidate_ranked_pass)[:100]}
-        
-        with open('{}.txt'.format(self.name), 'a') as writeFile:
-            rank = 1
-            for key, value in zip(reranked_candidate.keys(), reranked_candidate.values()):
-                writeFile.write('<{} A1 {} {} {} {}>\n'.format(queryID, key, rank, value, self.name))
-                rank += 1
-        writeFile.close()
-        return reranked_candidate
-
 
 if __name__=="__main__":
     pre_trained_model_path = '/Users/leekaho/Desktop/part2/glove/glove.6B.50d.txt'
@@ -138,7 +116,7 @@ if __name__=="__main__":
 
     
     parameters = {}
-    mode = 'train'
+    mode = 'test'
     if mode == 'train':
         # data.getSimProperty()
         relevancy_LR = LogisticRegressor(parameters)
@@ -154,15 +132,17 @@ if __name__=="__main__":
 
     
     #can be a new data pipeline
-    with open(gloveEmbedding_path, 'r') as readFile:
-            embedding = json.load(readFile)
-    readFile.close()
+    # with open(gloveEmbedding_path, 'r') as readFile:
+    #         embedding = json.load(readFile)
+    # readFile.close()
 
-    val_reader = pd.read_csv(val_path, sep='\t')
+    # val_reader = pd.read_csv(val_path, sep='\t')
 
-    with open(idf_val, 'r') as readFile:
-            val_idf = json.load(readFile)
-    readFile.close()
+    # with open(idf_val, 'r') as readFile:
+    #         val_idf = json.load(readFile)
+    # readFile.close()
+
+    val_data = dataPipeLine(gloveEmbedding_path, val_path, idf_val)
 
     #reranking
     src_path = '/Users/leekaho/Desktop/part2/'
@@ -184,9 +164,9 @@ if __name__=="__main__":
 
     for query_id, query_value in zip(query_raw.keys(), query_raw.values()):
         print(query_id, query_value)
-        query_pass_pid, query_pass_em = Data_Embedding(embedding, val_reader, query_id, val_idf[str(query_id)])
+        query_pass_pid, query_pass_em = val_data.getItemByGroup(query_id)
         y_pred = relevancy_LR.predict(query_pass_em)
-        reranked_candidate = relevancy_LR.saveToText(query_id, query_pass_pid, y_pred)
+        reranked_candidate = saveToText('LR', query_id, query_pass_pid, y_pred)
         avg_precision[query_id] = avg_Precision(reranked_candidate, labels[query_id])
         ndcg[query_id] = NDCG(query_id, reranked_candidate, labels[query_id])
         # break
