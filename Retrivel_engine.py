@@ -69,6 +69,8 @@ class BM25(Information_Rerivel):
         '''
 
         candidate_ranked_pass = {}
+
+        #Since we don't know the relevancy, assume all file to be accessed as relavent firstly
         r_i = np.sum(np.array([self.query_pass[queryID][k] for k in list(self.query_pass[queryID])]))
         R = np.sum(np.array([self.query_pass[queryID][k] for k in list(self.query_pass[queryID])])) 
         #get from filter the self.query_pass by values, label

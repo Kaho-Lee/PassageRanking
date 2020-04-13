@@ -9,12 +9,11 @@ import re
 from utils import *
 from nltk.stem import PorterStemmer, SnowballStemmer
 from sklearn.model_selection import KFold
-from nltk.tokenize import word_tokenize 
 import xgboost as xgb
-import pickle
 from random import shuffle
 import itertools
 from DataGenerator import dataPipeLine
+from Evaluation_Metrics import *
 
 def batchDMatrix(sampled_data_qid, data, downSampling=False):
     group = []
@@ -28,10 +27,8 @@ def batchDMatrix(sampled_data_qid, data, downSampling=False):
         batch_em.append( cur_qid_em[:, 1:])
         group.append(cur_qid_em.shape[0])
 
-    # batch_em = np.stack(batch_em, axis=0)
     batch_em = np.concatenate(batch_em, axis=0)
     print('shape em ', batch_em.shape)
-    # batch_label = np.stack(batch_label, axis=0)
     batch_label = np.concatenate(batch_label, axis=0)
     print('shape label ', batch_label.shape)
 
@@ -41,8 +38,6 @@ def batchDMatrix(sampled_data_qid, data, downSampling=False):
     return dmatrix
 
 def randomSampleKfold(train_qid_unique, qid_index, ratio=0.05):
-    # print(len(qid_index))
-    # print(len(qid_index), int(ratio*len(qid_index)), np.random.choice(len(qid_index), int(ratio*len(qid_index)), replace=False))
     choice = np.random.choice(len(qid_index), int(ratio*len(qid_index)), replace=False)
     sampled_index = [qid_index[x] for x in choice]
     # print(len(sampled_index) )
@@ -83,21 +78,6 @@ def paramSelection(parameters, train_data):
 
 
     kf = KFold(n_splits=5, random_state=None, shuffle=False)
-
-
-    # with open(gloveEmbedding_path, 'r') as readFile:
-    #     embedding = json.load(readFile)
-    # readFile.close()
-
-    # with open(idf_train, 'r') as readFile:
-    #     train_idf = json.load(readFile)
-    # readFile.close()
-
-     #from xgb sample code https://github.com/dmlc/xgboost/blob/master/demo/rank/rank_sklearn.py
-    # params = {'objective': 'rank:ndcg', 'learning_rate': 0.1,
-    #       'gamma': 1.0, 'min_child_weight': 0.1,
-    #       'max_depth': 6, 'n_estimators': 4}
-    # passRank = xgb.sklearn.XGBRanker(**params) 
     
     maxIteration = 2
     batchsize = 300
@@ -122,9 +102,6 @@ def paramSelection(parameters, train_data):
             train_data_qid = randomSampleKfold(train_qid_unique, train_qid_index, ratio=0.15)
             eval_data_qid = randomSampleKfold(train_qid_unique, eval_qid_index)
 
-            # train_data_qid = [train_qid_unique[x] for x in train_qid_index]
-            # eval_data_qid = [train_qid_unique[x] for x in eval_qid_index]
-
             print('Train DMatrix, num ', len(train_data_qid))
             train_dmatrix = batchDMatrix(train_data_qid, train_data, downSampling=True)
             print('Eval DMatrix, num ', len(eval_data_qid))
@@ -134,14 +111,12 @@ def paramSelection(parameters, train_data):
                     evals=[(eval_dmatrix, 'validation')], verbose_eval=False, evals_result = eval_ndcg, xgb_model=None )
             
             print('Metrics History are {} '.format( eval_ndcg['validation']['ndcg']))
-            #avg_ndcg += eval_ndcg['validation']['ndcg'][-1]
             avg_ndcg += passRank.best_score
         
         avg_ndcg = avg_ndcg/5
         print('current avg ndcg {}, best avg ndcg {}'.format(avg_ndcg, cur_bestNDGC))
         if avg_ndcg > cur_bestNDGC:
             print('Best Model Update: ', params)
-            # best_model = passRank
             best_param = params
             cur_bestNDGC = avg_ndcg
         print('\n')  
@@ -168,25 +143,6 @@ def train(parameter, train_data):
     train_index = [int(x) for x in all_choice if x not in test_index]
     # print(train_index)
     
-    #from xgb sample code https://github.com/dmlc/xgboost/blob/master/demo/rank/rank.py
-    # params_ndcg_e1 = {'objective': 'rank:ndcg', 'eta': 0.1, 'gamma': 1.0,
-    #       'min_child_weight': 0.1, 'max_depth': 6, 'eval_metric':['ndcg', 'map']}
-
-
-    # with open(gloveEmbedding_path, 'r') as readFile:
-    #     embedding = json.load(readFile)
-    # readFile.close()
-
-    # with open(idf_train, 'r') as readFile:
-    #     train_idf = json.load(readFile)
-    # readFile.close()
-
-     #from xgb sample code https://github.com/dmlc/xgboost/blob/master/demo/rank/rank_sklearn.py
-    # params = {'objective': 'rank:ndcg', 'learning_rate': 0.1,
-    #       'gamma': 1.0, 'min_child_weight': 0.1,
-    #       'max_depth': 6, 'n_estimators': 4}
-    # passRank = xgb.sklearn.XGBRanker(**params) 
-    
     maxIteration = 1
     batchsize = 300
     
@@ -201,9 +157,6 @@ def train(parameter, train_data):
         
         train_data_qid = randomSampleKfold(qid_unique, train_index, ratio=0.3)
         eval_data_qid = randomSampleKfold(qid_unique, test_index, ratio=0.3)
-
-        # train_data_qid = [train_qid_unique[x] for x in train_qid_index]
-        # eval_data_qid = [train_qid_unique[x] for x in eval_qid_index]
 
         print('Train DMatrix, num ', len(train_data_qid))
         train_dmatrix = batchDMatrix(train_data_qid, train_data, downSampling=False)
@@ -233,58 +186,44 @@ if __name__=="__main__":
     'gamma': [0.1, 0.5, 1.0]
     }
 
-    parameters = {
-    'max_depth': [6, 15],
-    'eta': [ 0.15],
-    'min_child_weight': [1, 5 ],
-    'gamma': [1.0]
-    }#discard eta=0.5 above
-
     # parameters = {
-    # 'max_depth': [6, 10],
-    # 'eta': [0.1, 0.5],
-    # 'min_child_weight': [0.1],
-    # 'gamma': [0.5, 1.0]
-    # }
+    # 'max_depth': [6, 15],
+    # 'eta': [ 0.15],
+    # 'min_child_weight': [5],
+    # 'gamma': [1.0]
+    # }#for quick prototype
+ 
 
-    
-    # a = t
-
-    gloveEmbedding_path = '/Users/leekaho/Desktop/part2/gloveEmbedding.json'
-    train_path = '/Users/leekaho/Desktop/part2/train_data.tsv'
-    val_path = '/Users/leekaho/Desktop/part2/validation_data.tsv'
-    idf_val = '/Users/leekaho/Desktop/part2/val_idf.json'
-    idf_train = '/Users/leekaho/Desktop/part2/train_idf.json'
+    root_path =  '../Data/'
+    gloveEmbedding_path = root_path+'gloveEmbedding.json'
+    train_path = root_path+'train_data.tsv'
+    val_path = root_path+'validation_data.tsv'
+    idf_val = root_path+'val_idf.json'
+    idf_train = root_path+'train_idf.json'
 
     train_data = dataPipeLine(gloveEmbedding_path, train_path, idf_train)
 
-    selectModel = False
+    selectModel = True
     if selectModel:
         # best_param = paramSelection(parameters, train_path, gloveEmbedding_path, idf_train)
         best_param = paramSelection(parameters, train_data)
     else:
         best_param =  {'objective': 'rank:ndcg', 'eta': 0.5, 'gamma': 1.0,
-          'min_child_weight': 5, 'max_depth': 6, 'eval_metric':['map', 'ndcg']} #to be determined
+          'min_child_weight': 5, 'max_depth': 6, 'eval_metric':['map', 'ndcg']}
 
     
-    isTrain = False
+    isTrain = True
     if isTrain:
         train(best_param , train_data)
 
     passRank = xgb.Booster()  # init model
     passRank.load_model('LambdaMart_all.model')  # load data
 
-    # print('Best xgb ranker model ', best_model)
-    '''
-    pred = xgb_model.predict(test_dmatrix)
-    '''
-
     val_data = dataPipeLine(gloveEmbedding_path, val_path, idf_val)
 
     #reranking
-    src_path = '/Users/leekaho/Desktop/part2/'
     raw_path = 'query_passage_raw.json'
-    with open(src_path + raw_path, 'r') as readFile:
+    with open(root_path+ raw_path, 'r') as readFile:
         temp = json.load(readFile)
         query_raw = temp['query']
         labels = temp['query_pass']
@@ -304,7 +243,6 @@ if __name__=="__main__":
         query_pass_pid, query_pass_em = val_data.getItemByGroup(query_id)
         dmatrix = xgb.DMatrix(query_pass_em[:, 1:])
         y_pred = np.atleast_2d( passRank.predict(dmatrix)).T
-        # print(y_pred)
         reranked_candidate = saveToText('LM', query_id, query_pass_pid, y_pred)
         avg_precision[query_id] = avg_Precision(reranked_candidate, labels[query_id])
         ndcg[query_id] = NDCG(query_id, reranked_candidate, labels[query_id])

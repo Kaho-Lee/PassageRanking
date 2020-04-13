@@ -14,6 +14,7 @@ from nltk.tokenize import word_tokenize
 from sklearn.manifold import TSNE
 #nltk.download('stopwords')
 
+
 def saveToText(name, queryID, pid, y_pred):
     candidate_ranked_pass = {}
     for i, score in zip(pid, y_pred):
@@ -91,49 +92,7 @@ def IDFOfDataSet(path, name):
         json.dump(idf, writeFile)
     writeFile.close()
 
-def avg_Precision( results, labels):
-    count = 0
-    relavance = 0
-    precision_lst = []
-    # print(list(results.keys()))
-    # print('ground truth ')
-    # labels = {k: v for k, v in sorted(labels.items(), \
-    #     key=lambda item: item[1], reverse=True)}
-    # print({k: labels[k] for k in list(labels)[:100]})
 
-    #pid: score
-    for pid in results.keys():
-        count += 1
-        if labels[pid] == 1.0:
-            relavance += 1
-            precision = relavance/count
-            precision_lst.append(precision)
-    precision_lst = np.array(precision_lst)
-
-    if len(precision_lst) == 0:
-        return 0
-    else:
-        return np.mean(precision_lst)
-
-def NDCG(query_ID, results, labels):
-    log_2 = np.arange(len(list(results.keys())))+2
-    log_2 = np.log2(log_2)
-    '''
-    candidate_ranked_pass = {k: v for k, v in sorted(candidate_ranked_pass.items(), \
-        key=lambda item: item[1], reverse=True)}
-    '''
-    labels = {k: v for k, v in sorted(labels.items(), \
-        key=lambda item: item[1], reverse=True)}
-    
-    IDCG = np.array([labels[k] for k in list(labels)[:len(list(results.keys())) ]])
-    #print(IDCG)
-    DCG = np.array([labels[k] for k in list(results)])
-    #print(DCG)
-    
-    DCG = np.sum(np.divide(DCG, log_2))
-    IDCG = np.sum(np.divide(IDCG, log_2))
-    
-    return DCG/IDCG
 
 def metricToText(metricResults, metricName):
     with open(metricName+'.json', 'w') as writeFile:
@@ -307,51 +266,51 @@ def log_freqWeighting(query_lst, passage_lst, idf):
 
     return score
 
-def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val', downSampling=False, downSampleRate=0.5, raw=False):
-    #get query passage by group
+# def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val', downSampling=False, downSampleRate=0.5, raw=False):
+#     #get query passage by group
 
-    candidate_pass = val_reader[val_reader.qid.eq(int(queryID))]
-    # print(candidate_pass.shape)
-    # print(candidate_pass)
-    dict_empty = True
-    # print('can reader')
-    # print(candidate_pass)
+#     candidate_pass = val_reader[val_reader.qid.eq(int(queryID))]
+#     # print(candidate_pass.shape)
+#     # print(candidate_pass)
+#     dict_empty = True
+#     # print('can reader')
+#     # print(candidate_pass)
 
-    if downSampling:
-        num_line = candidate_pass.shape[0]
-        # print('num line ', num_line)
-        index = np.random.choice(num_line, int(num_line*downSampleRate), replace=False)
-        row_indx_lst = candidate_pass.index.tolist()
-        selected_row = [row_indx_lst[x] for x in index]
-        relavance_row = candidate_pass.relevancy.eq(1.0).index.tolist()[0]
-        selected_row.append(relavance_row)
-        candidate_pass = candidate_pass[candidate_pass.index.isin(selected_row)]
+#     if downSampling:
+#         num_line = candidate_pass.shape[0]
+#         # print('num line ', num_line)
+#         index = np.random.choice(num_line, int(num_line*downSampleRate), replace=False)
+#         row_indx_lst = candidate_pass.index.tolist()
+#         selected_row = [row_indx_lst[x] for x in index]
+#         relavance_row = candidate_pass.relevancy.eq(1.0).index.tolist()[0]
+#         selected_row.append(relavance_row)
+#         candidate_pass = candidate_pass[candidate_pass.index.isin(selected_row)]
         
-    batch_pid = []
-    batch_label = []
-    batch_query_pass_embedding = []
-    for i, row in candidate_pass.iterrows():
+#     batch_pid = []
+#     batch_label = []
+#     batch_query_pass_embedding = []
+#     for i, row in candidate_pass.iterrows():
 
-        query = row['queries'].lower()
-        #print(query)
-        passage = row['passage'].lower()
+#         query = row['queries'].lower()
+#         #print(query)
+#         passage = row['passage'].lower()
         
-        #print(passage)
-        # qid = str(row['qid'])
-        query_passage_embedding = generateEmbedding(embedding, query, passage, val_idf, raw=raw)
+#         #print(passage)
+#         # qid = str(row['qid'])
+#         query_passage_embedding = generateEmbedding(embedding, query, passage, val_idf, raw=raw)
 
-        cur_pid = [row['pid']]
-        cur_label = [row['relevancy']]
-        batch_pid.append(cur_pid)
-        batch_label.append(cur_label)
-        batch_query_pass_embedding.append(query_passage_embedding)
+#         cur_pid = [row['pid']]
+#         cur_label = [row['relevancy']]
+#         batch_pid.append(cur_pid)
+#         batch_label.append(cur_label)
+#         batch_query_pass_embedding.append(query_passage_embedding)
 
-    batch_pid = np.stack(batch_pid, axis=0)
-    batch_label = np.stack(batch_label, axis=0)
-    batch_query_pass_embedding = np.stack(batch_query_pass_embedding, axis=0)
+#     batch_pid = np.stack(batch_pid, axis=0)
+#     batch_label = np.stack(batch_label, axis=0)
+#     batch_query_pass_embedding = np.stack(batch_query_pass_embedding, axis=0)
 
-    #print(batch_query_pass_embedding.shape)
-    if mode == 'val':
-        return batch_pid, batch_query_pass_embedding
-    elif mode == 'Train':
-        return batch_label, batch_query_pass_embedding
+#     #print(batch_query_pass_embedding.shape)
+#     if mode == 'val':
+#         return batch_pid, batch_query_pass_embedding
+#     elif mode == 'Train':
+#         return batch_label, batch_query_pass_embedding

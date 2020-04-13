@@ -42,8 +42,10 @@ def fileToLst(path):
             query = line[2]
             passage = line[3]
 
-            query = re.sub("[^\sa-zA-Z0-9]+", ' ', query)
-            passage = re.sub("[^\sa-zA-Z0-9]+", ' ', passage)
+            # query = re.sub("[^\sa-zA-Z0-9]+", ' ', query)
+            query = re.sub("(\W)", ' ', query)
+            # passage = re.sub("[^\sa-zA-Z0-9]+", ' ', passage)
+            passage = re.sub("(\W)", ' ', passage)
             query_dict[line[0]] = query.lower()
             pass_dict[line[1]] = passage.lower()
 
@@ -74,14 +76,14 @@ def GenInvIndex(query_dict, pass_dict, query_pass,path):
         json_qnp['query_pass'] = query_pass
 
         totQuery = len(query_dict.keys())
-        print('tot query ', totQuery)
+        print('total query ', totQuery)
         totQuery_len = 0
         for query_val in query_dict.values():
             for item in query_val.split(' '):
                 totQuery_len += 1
-                if item not in query_word_set and item != '':
+                if item not in query_word_set and item != '' and item != ' ':
                     query_word_set.add(item)
-        print(len(query_word_set))
+        print('Length of query vocabulary set ',len(query_word_set))
         json_qnp['query_avdl'] = totQuery_len/totQuery
 
         
@@ -95,13 +97,13 @@ def GenInvIndex(query_dict, pass_dict, query_pass,path):
                 totPass+=1
                 pass_val = pass_dict[pass_id]
                 for item in pass_val.split(' '):
-                    if item != '':
+                    if item != '' and item != ' ':
                         totPass_len += 1
                         if item not in passage_word_set[queryID]:
                             passage_word_set[queryID].add(item)
 
             json_qnp['passage_avdl'][queryID] = totPass_len/totPass
-        print(len(passage_word_set))
+        print('Length of passage vocabulary set ',len(passage_word_set))
         
         json.dump(json_qnp, writeFile)
 
@@ -113,14 +115,14 @@ def GenInvIndex(query_dict, pass_dict, query_pass,path):
         json_invIndex = {}
 
         for item in query_word_set:
-            if item == '':
+            if item == '' and item != ' ':
                 continue
             json_invIndex[item] ={}
             json_invIndex[item][item] = 0
        
         for query_id in query_dict.keys():
             for item in query_dict[query_id].split(' '):
-                if item == '':
+                if item == '' and item != ' ':
                     continue
                 if query_id not in json_invIndex[item].keys():
                     json_invIndex[item][query_id] = 1
@@ -144,7 +146,7 @@ def GenInvIndex(query_dict, pass_dict, query_pass,path):
             totPass = len(list(query_pass[queryID].keys()))
 
             for item in passage_word_set[queryID]:
-                if item == '':
+                if item == '' and item != ' ':
                     continue
                 json_invIndex[queryID][item] ={}
                 json_invIndex[queryID][item][item] = 0
@@ -152,7 +154,7 @@ def GenInvIndex(query_dict, pass_dict, query_pass,path):
             for pass_id in query_pass[queryID].keys():
                 pass_val = pass_dict[pass_id]
                 for item in pass_val.split(' '):
-                    if item == '':
+                    if item == '' and item != ' ':
                         continue
                     if pass_id not in json_invIndex[queryID][item].keys():
                         json_invIndex[queryID][item][pass_id] = 1
@@ -172,10 +174,11 @@ def GenInvIndex(query_dict, pass_dict, query_pass,path):
 if __name__=='__main__':
 
     #generate the inverted index and parse the data, raw and preprocessed, to json files
-    can_lst = '/Users/leekaho/Desktop/part2/validation_data.tsv'
-    path = '/Users/leekaho/Desktop/part2/'
+    can_lst = '../Data/validation_data.tsv'
+
+    path = '../Data/'
     query_dict, pass_dict, query_pass = fileToLst(can_lst)
-    print('gen inv index')
+    print('generating inverted index')
     GenInvIndex(query_dict, pass_dict, query_pass, path)
 
     
