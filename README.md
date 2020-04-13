@@ -25,4 +25,4 @@ Note: If you want go through the grid search paramter selection process, change 
 train a parameter with all training data, change isTrain variable to True then the model will be saved automatically named as 'LambdaMart.model'. By the way, the best model I got has already been named as 'LambdaMart_all.model'
 
 6. For running Neural Network Model (Task 4). Run nn_passRank.ipynb
-Note: I use colab for training model in this task. Please change GPU setting in the code to fit your own envirnment. This notebook present the implementation and the results i got, and you can create a copy of this notebook if you want to play around. Sorry for any inconvinient.
+Note: I use colab for training model in this task. Please change GPU setting in the code to fit your own envirnment. This notebook present the implementation and the results i got, and you can create a copy of this notebook if you want to play around. The dataset path can be changed with referrence to the previous task. Sorry for any inconvinient.
