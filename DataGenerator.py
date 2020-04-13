@@ -162,6 +162,9 @@ class dataPipeLine:
         # plt.show()
 
     def randomChoice_unbalancedData(self, batch_size, ratio = 0.5, oversample=True):
+
+        #sorry for misuse the term of 'oversampling', they are all oversampling, but different in
+        #the ratio.
         if oversample:
             pos = max(ratio, self.pos)
         else:

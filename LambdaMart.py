@@ -72,10 +72,6 @@ def paramSelection(parameters, train_data):
 
     train_qid_unique = train_data.getReader().qid.unique().tolist()
 
-    #from xgb sample code https://github.com/dmlc/xgboost/blob/master/demo/rank/rank.py
-    # params_ndcg_e1 = {'objective': 'rank:ndcg', 'eta': 0.1, 'gamma': 1.0,
-    #       'min_child_weight': 0.1, 'max_depth': 6, 'eval_metric':['ndcg', 'map']}
-
 
     kf = KFold(n_splits=5, random_state=None, shuffle=False)
     

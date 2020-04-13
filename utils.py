@@ -93,7 +93,6 @@ def IDFOfDataSet(path, name):
     writeFile.close()
 
 
-
 def metricToText(metricResults, metricName):
     with open(metricName+'.json', 'w') as writeFile:
         #writeFile.write('Query {}\n'.format(metricName))
@@ -265,52 +264,3 @@ def log_freqWeighting(query_lst, passage_lst, idf):
     # score = score/np.sqrt(cos_normalizer)
 
     return score
-
-# def Data_Embedding(embedding, val_reader, queryID, val_idf, mode='val', downSampling=False, downSampleRate=0.5, raw=False):
-#     #get query passage by group
-
-#     candidate_pass = val_reader[val_reader.qid.eq(int(queryID))]
-#     # print(candidate_pass.shape)
-#     # print(candidate_pass)
-#     dict_empty = True
-#     # print('can reader')
-#     # print(candidate_pass)
-
-#     if downSampling:
-#         num_line = candidate_pass.shape[0]
-#         # print('num line ', num_line)
-#         index = np.random.choice(num_line, int(num_line*downSampleRate), replace=False)
-#         row_indx_lst = candidate_pass.index.tolist()
-#         selected_row = [row_indx_lst[x] for x in index]
-#         relavance_row = candidate_pass.relevancy.eq(1.0).index.tolist()[0]
-#         selected_row.append(relavance_row)
-#         candidate_pass = candidate_pass[candidate_pass.index.isin(selected_row)]
-        
-#     batch_pid = []
-#     batch_label = []
-#     batch_query_pass_embedding = []
-#     for i, row in candidate_pass.iterrows():
-
-#         query = row['queries'].lower()
-#         #print(query)
-#         passage = row['passage'].lower()
-        
-#         #print(passage)
-#         # qid = str(row['qid'])
-#         query_passage_embedding = generateEmbedding(embedding, query, passage, val_idf, raw=raw)
-
-#         cur_pid = [row['pid']]
-#         cur_label = [row['relevancy']]
-#         batch_pid.append(cur_pid)
-#         batch_label.append(cur_label)
-#         batch_query_pass_embedding.append(query_passage_embedding)
-
-#     batch_pid = np.stack(batch_pid, axis=0)
-#     batch_label = np.stack(batch_label, axis=0)
-#     batch_query_pass_embedding = np.stack(batch_query_pass_embedding, axis=0)
-
-#     #print(batch_query_pass_embedding.shape)
-#     if mode == 'val':
-#         return batch_pid, batch_query_pass_embedding
-#     elif mode == 'Train':
-#         return batch_label, batch_query_pass_embedding
