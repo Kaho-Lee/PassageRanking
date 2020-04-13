@@ -1,6 +1,7 @@
 # PassageRanking
 
 Dataset: https://drive.google.com/file/d/1eKDfmDZoVuDADcR_HGMHMnjNJHDrXUs9/view
+
 Pre-trained Embedding; http://nlp.stanford.edu/data/glove.6B.zip -> glove.6B.50d.txt
 
 Depandency: nltk, xgboost, tensorflow 2.x, Pandas
