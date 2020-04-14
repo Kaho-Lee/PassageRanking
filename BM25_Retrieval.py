@@ -40,6 +40,8 @@ if __name__=='__main__':
         #break
 
     print('Mean value of the average precision is {}'.format(np.mean(list(avg_precision.values()))))
+    avg_precision['mean'] = np.mean(list(avg_precision.values()))
     metricToText(avg_precision, 'BM25_Average_Precision')
     print('Mean value of NDCG is {}'.format(np.mean(list(ndcg.values()))))
+    ndcg['mean'] = np.mean(list(ndcg.values()))
     metricToText(ndcg, 'BM25_NDCG')

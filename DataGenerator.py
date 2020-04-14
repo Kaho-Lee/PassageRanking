@@ -135,9 +135,9 @@ class dataPipeLine:
         # print('All embedding shape ', visual_embedding.shape)
         # visual_embedding = TSNE(n_components=2).fit_transform(visual_embedding)
 
-        label_txt = 'relavence: average cost={}, tf={}'.format(round(self.relavanceCos, 2), round(self.relavanceTFIDF, 2))
+        label_txt = 'relavence: average cos ={}, log(tf)={}'.format(round(self.relavanceCos, 2), round(self.relavanceTFIDF, 2))
         plt.scatter(relavancePot[:,0], relavancePot[:,1], s=5, marker='x', c='r', label=label_txt)
-        label_txt = 'non-relavence: average cos={}, tf={}'.format(round(self.nonrelavanceCos, 2), round(self.nonrelavanceTFIDF, 2))
+        label_txt = 'non-relavence: average cos={}, log(tf)={}'.format(round(self.nonrelavanceCos, 2), round(self.nonrelavanceTFIDF, 2))
         plt.scatter(non_relavancePot[:,0], non_relavancePot[:,1], s=2, marker='o', facecolors='none', edgecolors='b', label=label_txt)
         plt.legend()
         plt.xlabel('Cos Similarity')

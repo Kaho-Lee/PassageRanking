@@ -9,8 +9,6 @@ import time
 import re
 from utils import *
 from nltk.stem import PorterStemmer, SnowballStemmer
-from sklearn.manifold import TSNE
-from sklearn.decomposition import PCA
 from DataGenerator import dataPipeLine
 from Evaluation_Metrics import *
 
@@ -68,12 +66,10 @@ class LogisticRegressor:
             loss_grad = self.sigmoid_loss_grad(y, x, theta)
 
             if cur_iteration % 10 == 0:
-                choices = dataGenerator.randomChoice_unbalancedData(batch_size)
-                x, y = dataGenerator.getitem(choices)
                 y_pred = np.round(self.predict(x))
                 print('Batch: x {} y {}, ratio {}'.format(x.shape, y.shape, np.sum(y)))
                 acc = accuracy(y, y_pred)
-                print('Iteration {}: Train current loss is {}, Val accuracy is {}'.format(cur_iteration, loss, acc))
+                print('Iteration {}: Train current loss is {}, Training accuracy is {}'.format(cur_iteration, loss, acc))
 
             cur_iteration += 1
             loss_lst.append(loss)
@@ -116,9 +112,9 @@ if __name__=="__main__":
 
     
     parameters = {}
-    mode = 'test'
+    mode = 'train'
     if mode == 'train':
-        data.getSimProperty()
+        # data.getSimProperty()
         relevancy_LR = LogisticRegressor(parameters)
         relevancy_LR.train(data)
     elif mode == 'test':
@@ -144,7 +140,7 @@ if __name__=="__main__":
     ndcg = {}
 
     try:
-        os.remove('LR.txt')
+        os.remove('LR_TFIDF.txt')
     except OSError:
         pass
 
@@ -152,7 +148,7 @@ if __name__=="__main__":
         print(query_id, query_value)
         query_pass_pid, query_pass_em = val_data.getItemByGroup(query_id)
         y_pred = relevancy_LR.predict(query_pass_em)
-        reranked_candidate = saveToText('LR', query_id, query_pass_pid, y_pred)
+        reranked_candidate = saveToText('LR_TFIDF', query_id, query_pass_pid, y_pred)
         avg_precision[query_id] = avg_Precision(reranked_candidate, labels[query_id])
         ndcg[query_id] = NDCG(query_id, reranked_candidate, labels[query_id])
         # break
@@ -160,8 +156,8 @@ if __name__=="__main__":
 
     print('Mean value of the average precision is {}'.format(np.mean(list(avg_precision.values()))))
     avg_precision['mean'] = np.mean(list(avg_precision.values()))
-    metricToText(avg_precision, 'LR_Average_Precision')
+    metricToText(avg_precision, 'LR_TFIDF_Average_Precision')
     print('Mean value of NDCG is {}'.format(np.mean(list(ndcg.values()))))
     ndcg['mean'] = np.mean(list(ndcg.values()))
-    metricToText(ndcg, 'LR_NDCG')
+    metricToText(ndcg, 'LR_TFIDF_NDCG')
 
