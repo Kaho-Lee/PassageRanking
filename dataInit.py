@@ -62,6 +62,7 @@ if __name__=="__main__":
         os.makedirs(root_path)
         
         print('Downloading dataset and pre-trained embedding')
+        #file_id = 1eKDfmDZoVuDADcR_HGMHMnjNJHDrXUs9 #for part 1
         file_id = '1npkPA-BdiGELHfBrUOcpqumjbQTspg9p'
         destination = 'part2.zip'
         download_file_from_google_drive(file_id, destination, root_path)

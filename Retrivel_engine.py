@@ -17,7 +17,85 @@ class Information_Rerivel:
                 rank += 1
         writeFile.close()
 
+class VectorRetrivel(Information_Rerivel):
+    def __init__(self, passage_inv_path, passage_raw_path, query_inv_path):
+        super().__init__()
+        self.passage_inv_stored = passage_inv_path
 
+        with open(self.passage_inv_stored, 'r') as readFile:
+            self.pass_inv_data = json.load(readFile)
+        readFile.close()
+
+        self.passage_raw_stored = passage_raw_path
+
+        with open(self.passage_raw_stored, 'r') as readFile:
+            temp = json.load(readFile)
+            self.pass_raw_data = temp['passage']
+            self.query_pass = temp['query_pass']
+        readFile.close()
+        del temp
+
+        self.query_inv_stored = query_inv_path
+
+        with open(self.query_inv_stored, 'r') as readFile:
+            self.query_inv_data = json.load(readFile)
+        readFile.close()
+
+        self.name = 'VS'
+
+        if(os.path.exists('{}.txt'.format(self.name))):
+            os.remove('{}.txt'.format(self.name))
+    
+    def retrivel(self, queryID, queryVal, show=True):
+        '''
+        use tf_idf
+        '''
+        candidate_ranked_pass = {}
+
+        terms = set(queryVal.split(' '))
+        print(queryID, terms)
+        for item in terms:
+            if (item != '') and (item in self.pass_inv_data[queryID].keys()):
+                candidate = self.pass_inv_data[queryID][item] #fetch a single inverted index by one term in query
+                # print(candidate)
+                # print(item, candidate['idf'])
+                for key in candidate.keys(): #id of pass
+                    if key == item  or key == 'idf':
+                        continue
+                    
+                    #calculate similarity score
+                    if key not in candidate_ranked_pass.keys():
+                        candidate_ranked_pass[key] = candidate[key]*candidate['idf']
+                    else:
+                        candidate_ranked_pass[key] += candidate[key]*candidate['idf']
+        
+        #Normalisation - cosine normalization
+        wf_idf = self.pass_inv_data[queryID]
+        for key in candidate_ranked_pass.keys():
+            p = self.pass_raw_data[key].split(' ')
+            w_l2 = 0
+            for word in p:
+                if word != '':
+                    w_l2 += (wf_idf[word][key]*wf_idf[word]['idf'])**2
+            candidate_ranked_pass[key] = candidate_ranked_pass[key]/np.sqrt(w_l2)
+        
+        candidate_ranked_pass = {k: v for k, v in sorted(candidate_ranked_pass.items(), \
+        key=lambda item: item[1], reverse=True)}
+
+        if len(candidate_ranked_pass.keys()) <= 100:
+            reranked_candidate = candidate_ranked_pass
+        else:
+            reranked_candidate = {k: candidate_ranked_pass[k] for k in list(candidate_ranked_pass)[:100]}
+            
+        if show:
+            i=0
+            for k in reranked_candidate.keys():
+                i += 1
+                print('{} {} {}'.format(i, k, self.pass_raw_data[k]))
+
+        # print(candidate_ranked_pass['1621582'])
+
+        return reranked_candidate
 
 class BM25(Information_Rerivel):
     '''
