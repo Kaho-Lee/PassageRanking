@@ -140,7 +140,7 @@ if __name__=="__main__":
     ndcg = {}
 
     try:
-        os.remove('LR_TFIDF.txt')
+        os.remove('LR.txt')
     except OSError:
         pass
 
@@ -148,7 +148,7 @@ if __name__=="__main__":
         print(query_id, query_value)
         query_pass_pid, query_pass_em = val_data.getItemByGroup(query_id)
         y_pred = relevancy_LR.predict(query_pass_em)
-        reranked_candidate = saveToText('LR_TFIDF', query_id, query_pass_pid, y_pred)
+        reranked_candidate = saveToText('LR', query_id, query_pass_pid, y_pred)
         avg_precision[query_id] = avg_Precision(reranked_candidate, labels[query_id])
         ndcg[query_id] = NDCG(query_id, reranked_candidate, labels[query_id])
         # break
@@ -156,8 +156,8 @@ if __name__=="__main__":
 
     print('Mean value of the average precision is {}'.format(np.mean(list(avg_precision.values()))))
     avg_precision['mean'] = np.mean(list(avg_precision.values()))
-    metricToText(avg_precision, 'LR_TFIDF_Average_Precision')
+    metricToText(avg_precision, 'LR_Average_Precision')
     print('Mean value of NDCG is {}'.format(np.mean(list(ndcg.values()))))
     ndcg['mean'] = np.mean(list(ndcg.values()))
-    metricToText(ndcg, 'LR_TFIDF_NDCG')
+    metricToText(ndcg, 'LR_NDCG')
 

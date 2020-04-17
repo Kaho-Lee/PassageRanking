@@ -29,3 +29,5 @@ train a parameter with all training data, change isTrain variable to True then t
 6. For running Neural Network Model (Task 4). Run nn_passRank.ipynb
 
 Note: I use colab for training model in this task. Please change GPU setting in the code to fit your own envirnment. This notebook present the implementation and the results i got, and you can create a copy of this notebook if you want to play around. The dataset path can be changed with referrence to the previous task. Sorry for any inconvinience.
+
+7. DataGenerator.py is a generic data generation script for the model implemented at this project
