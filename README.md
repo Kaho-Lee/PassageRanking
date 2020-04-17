@@ -1,6 +1,7 @@
 # PassageRanking
 
-Dataset: https://drive.google.com/file/d/1eKDfmDZoVuDADcR_HGMHMnjNJHDrXUs9/view
+Dataset: https://drive.google.com/file/d/1eKDfmDZoVuDADcR_HGMHMnjNJHDrXUs9/view Part2
+Dataset: https://drive.google.com/file/d/1eKDfmDZoVuDADcR_HGMHMnjNJHDrXUs9/view Part1
 
 Pre-trained Embedding; http://nlp.stanford.edu/data/glove.6B.zip -> glove.6B.50d.txt
 
